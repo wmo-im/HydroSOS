@@ -1,2 +1,2 @@
-# Hydrology-Data-Archives-Access-Exchange-WHOS
-Hydrology Data Archives Access and Exchange (WHOS)
+# Hydrological Status and Outlook System
+Hydrological Status and Outlook System (HydroSOS)
