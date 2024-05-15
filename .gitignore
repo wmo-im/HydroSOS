@@ -1,0 +1,11 @@
+# excel files (for now)
+*.xlsx
+
+# pdf files 
+*.pdf
+
+# csvs for excel
+39001_for_excel.csv
+
+# jotter notebooks
+StatusCalc.ipynb
