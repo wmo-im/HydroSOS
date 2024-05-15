@@ -26,8 +26,13 @@ Where:
 * ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average flow. Each monthly flow is divided by this reference average before calculating percentile rank and flow status. 
 
 
+## Excel 
+
+```StatusCalc Excel.xlsx``` can be used instead of the Python/R code to produce the flow status categories. This requires monthly averages to be calculated prior to data entry into the spreadsheet. Note to ensure consistency with the scripts, months with less than 50 % data completeness should be left blank. To modify the 'startYear' and 'endYear' parameters for calculating the reference average flow, users should modify the formulae from ```B68:M68```.
+The excel files currently only support monhtly timeseries data starting on 01/1965.  
+
 ## Tests
-A jupyter notebook of tests which cross-verify the results of the Python and R code on four example datasets is provided. 
+A jupyter notebook of tests which cross-verify the results of the Python and R code on four example datasets is provided. The Python/R outputs were also cross-verified against the excel outputs, on modified datasets (starting in 1965).
 
 
 Last-updated: 15/05/2024 

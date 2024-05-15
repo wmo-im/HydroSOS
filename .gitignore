@@ -1,5 +1,5 @@
 # excel files (for now)
-*.xlsx
+~$StatusCalc Excel.xlsx
 
 # pdf files 
 *.pdf

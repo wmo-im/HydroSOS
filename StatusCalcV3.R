@@ -11,7 +11,7 @@
 
 # read in catchment list
 #stations<-read.csv("stations.csv")
-stationid<-44008
+stationid<-39001
 input_directory<-"./example_data/input/"
 output_directory<-"./example_data/output_R/"
 
