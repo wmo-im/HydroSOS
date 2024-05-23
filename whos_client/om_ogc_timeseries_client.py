@@ -85,57 +85,80 @@ class OmOgcTimeseriesClient:
 
     def getData(
         self,
-        monitoringPoint : str,
-        variableName : str,
         beginPosition : str,
         endPosition : str,
+        monitoringPoint : str = None,
+        variableName : str = None,
+        timeseriesIdentifier : str = None,
         view : str = None
     ) -> List[dict]:
         
+        if timeseriesIdentifier is None:
+            if monitoringPoint is None:
+                raise TypeError("monitoringPoint can't be None if timeseriesIdentifier is None")
+            if variableName is None:
+                raise TypeError("variableName can't be None if timeseriesIdentifier is None")
         view = view if view is not None else self.view
         
-        # First, retrieves timeseries metadata for the monitoring point
-        ts_metadata = self.getTimeseries(
-            view = view, 
-            monitoringPoint = monitoringPoint
-        )
-        ts_matches = [x for x in ts_metadata["member"] if x["observedProperty"]["href"] == variableName]
-        if len(ts_matches):
-            timeseriesIdentifier = ts_matches[0]["id"]
-            
-            # Now that we have the timeseries identifier, retrieve data
-            ts_data = self.getTimeseries(
+        # First, retrieves timeseries metadata for the monitoring point or timeseriesIdentifier
+        if timeseriesIdentifier is None:
+            ts_metadata = self.getTimeseries(
+                view = view, 
+                monitoringPoint = monitoringPoint
+            )
+            ts_matches = [x for x in ts_metadata["member"] if x["observedProperty"]["href"] == variableName]
+            if len(ts_matches):
+                timeseriesIdentifier = ts_matches[0]["id"]
+            else:
+                raise ValueError("timeseries metadata not found for monitoringPoint: %s, variableName: %s" % (monitoringPoint, variableName))
+        else: 
+            ts_metadata = self.getTimeseries(
                 view = view,
-                monitoringPoint = monitoringPoint,
-                beginPosition = beginPosition,
-                endPosition = endPosition,
                 timeseriesIdentifier = timeseriesIdentifier
             )
-            return [ 
-                {
-                    "date": p["time"]["instant"],
-                    "value": p["value"]
-                }
-                for p in ts_data["member"][0]["result"]["points"]
-            ]
+            if not len(ts_metadata):
+                raise ValueError("timeseries metadata not found for timeseriesIdentifier: %s" % timeseriesIdentifier)
+            
+        # Now that we have the timeseries identifier, retrieve data
+        ts_data = self.getTimeseries(
+            view = view,
+            # monitoringPoint = monitoringPoint,
+            beginPosition = beginPosition,
+            endPosition = endPosition,
+            timeseriesIdentifier = timeseriesIdentifier
+        )
+        return [ 
+            {
+                "date": p["time"]["instant"],
+                "value": p["value"]
+            }
+            for p in ts_data["member"][0]["result"]["points"]
+        ]
 
 @click.command()
 @click.option('-t','--token', default=None, type=str, help='WHOS access token')
 @click.option('-u','--url', default=None, type=str, help='WHOS OM OGC timeseries API url')
 @click.option('-o','--output', default=None, type=str, help='Save result into this file (instead of print on stdout)')
 @click.option('-c','--csv', is_flag=True, default=False, help='Use CSV format for output (instead of JSON)')
-@click.argument("monitoring_point")
-@click.argument("variable_name")
+@click.option("-m","--monitoring_point",default=None,type=str,help="site identifier. It must be user together with --variable_name")
+@click.option("-v","--variable_name",default=None,type=str,help="variable identifier. It must be used together with --monitoring_point")
+@click.option("-s","--timeseries_identifier",default=None,type=str,help="timeseries identifier. If set, --monitoring_point and --variable_name are ignored")
 @click.argument("begin_position")
 @click.argument("end_position")
-def getData(token, url, output, csv, monitoring_point, variable_name, begin_position, end_position):
+def getData(token, url, output, csv, monitoring_point, variable_name, timeseries_identifier, begin_position, end_position):
     config = {}
     if token is not None:
         config["token"] = token
     if url is not None:
         config["token"] = token
     client = OmOgcTimeseriesClient(config)
-    data = client.getData(monitoring_point, variable_name, begin_position, end_position)
+    data = client.getData(
+        begin_position, 
+        end_position,
+        monitoringPoint = monitoring_point, 
+        variableName = variable_name, 
+        timeseriesIdentifier = timeseries_identifier
+    )
     if output is not None:
         if csv:
             df = DataFrame(data)
