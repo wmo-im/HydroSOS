@@ -32,7 +32,19 @@ Where:
 The excel files currently only support monhtly timeseries data starting on 01/1965.  
 
 ## Tests
-A jupyter notebook of tests which cross-verify the results of the Python and R code on four example datasets is provided. The Python/R outputs were also cross-verified against the excel outputs, on modified datasets (starting in 1965).
+A jupyter notebook of tests which cross-verify the results of the Python and R code on four example datasets is provided. The Python/R outputs were also cross-verified against the excel outputs, on modified datasets (with timeseries starting in 1965).
 
+## csv_to_json
+A Python script that converts the csv outputs of the Python/R script to json files for use in the HydroSOS web portal is also provided. It can process multiple files in one go.
 
-Last-updated: 15/05/2024 
+ It should be used as follows: 
+``` python csv_to_json.py input_directory output_directory```
+
+For example: 
+```python csv_to_json.py ./example_data/output_Python ./example_data/output_json```
+
+Where:
+*  ```input_directory``` is the directory containing .csv status outputs from the python/R script with the name ```cat_stationID.csv```, this naming convention must be adhered to for the script to work. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/output_Python](./example_data/output_Python) for how these files should look.
+* ```output_directory``` is the directory the processed .csv files will be written to. They will be named based on the dates of the data being processed. 
+
+Last-updated: 23/05/2024 EK
