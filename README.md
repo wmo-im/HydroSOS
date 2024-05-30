@@ -1,5 +1,5 @@
 # Hydrological Status and Outlook System
-Hydrological Status and Outlook System (HydroSOS)
+Hydrological Status and Outlook System (HydroSOS). This repository contains code to facilitate common categorisation of status data for integration into the HydroSOS portal. This repository contains Python/R/Excel code to convert daily flow timeseries data into monthly flow categories saved in .csv files. These .csv files should then be further processed into monthly .json files using the ```csv_to_json.py``` script. On the HydroSOS web portal, the monthly flow category .csv files for each station are displayed in timeseries graphs, whereas the .json files for each month are visualised on the map. 
 
 ## R Code
 The R Code can calculate flow status categories for an individual flow station timeseries saved in a .csv file. See files in [example_data/input](./example_data/input) for how these timeseries files should look. 
@@ -29,7 +29,7 @@ Where:
 ## Excel 
 
 ```StatusCalc Excel.xlsx``` can be used instead of the Python/R code to produce the flow status categories. This requires monthly averages to be calculated prior to data entry into the spreadsheet. Note to ensure consistency with the scripts, months with less than 50 % data completeness should be left blank. To modify the 'startYear' and 'endYear' parameters for calculating the reference average flow, users should modify the formulae from ```B68:M68```.
-The excel files currently only support monhtly timeseries data starting on 01/1965.  
+The excel files currently only support monhtly timeseries data starting on 01/1965. Excel file created by Mr. José Pablo Cantillano, Costa Rican Institute of Electricity. 
 
 ## Tests
 A jupyter notebook of tests which cross-verify the results of the Python and R code on four example datasets is provided. The Python/R outputs were also cross-verified against the excel outputs, on modified datasets (with timeseries starting in 1965).
@@ -47,4 +47,4 @@ Where:
 *  ```input_directory``` is the directory containing .csv status outputs from the python/R script with the name ```cat_stationID.csv```, this naming convention must be adhered to for the script to work. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/output_Python](./example_data/output_Python) for how these files should look.
 * ```output_directory``` is the directory the processed .csv files will be written to. They will be named based on the dates of the data being processed. 
 
-Last-updated: 23/05/2024 EK
+Last-updated: 30/05/2024 EK
