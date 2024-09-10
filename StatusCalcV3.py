@@ -80,7 +80,7 @@ for f in os.listdir(args.input_directory):
         """ STEP 2: CALCULATE MEAN MONTHLY FLOWS AS A PERCENTAGE OF AVERAGE """
 
         #calculate long term average
-        LTA = groupBy[(groupBy['year'] >= 1991) & (groupBy['year'] <= 2020)].groupby(['month'])['mean_flow'].mean()
+        LTA = groupBy[(groupBy['year'] >= stdStart) & (groupBy['year'] <= stdEnd)].groupby(['month'])['mean_flow'].mean()
 
         #divide each month by this long term average
         for i in range(1,13):

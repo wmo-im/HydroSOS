@@ -14,8 +14,8 @@ args = parser.parse_args()
 
 allFilesDF = pd.DataFrame()
 # read the CSV files in the data directory
-for index, filename in enumerate(os.listdir("./example_data/output_Python")):
-        with open("./example_data/output_Python"+'/'+filename, mode="r") as fr:
+for index, filename in enumerate(os.listdir(args.input_directory)):
+        with open(args.input_directory+'/'+filename, mode="r") as fr:
             if filename.endswith('.csv'):
                 df = pd.read_csv(fr)
                 filename = os.path.splitext(str(filename))[0] #remove file extenstion
@@ -35,4 +35,4 @@ for date in allFilesDF.index:
     if type(allFilesDF.loc[date]) == pd.core.series.Series:
         pd.DataFrame(allFilesDF.loc[date]).T.to_json(f"{args.output_directory}/{date.strftime('%Y-%m')}.json", orient = 'records')
     else: 
-        allFilesDF.loc[date].to_json(f"{args.input_directory}{date.strftime('%Y-%m')}.json", orient = 'records')
+        allFilesDF.loc[date].to_json(f"{args.output_directory}/{date.strftime('%Y-%m')}.json", orient = 'records')
