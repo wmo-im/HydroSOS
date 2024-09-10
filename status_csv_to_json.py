@@ -3,11 +3,11 @@ import pandas as pd, os, argparse
 
 parser = argparse.ArgumentParser(
                     prog='Hydro SOS csv_to_json PYTHON',
-                    description='Convert categorgised station monthly flow status.csv to a single monthly json file.',
+                    description='Convert categorgised station (point data) monthly flow status.csv to a single monthly json file.',
                     epilog='Gemma N, Ezra K, UKCEH, 22052024')
 
 
-parser.add_argument('input_directory', help='input directory, should ONLY contain .csv monthly categorised flow status files, see GitHub for examples.')   
+parser.add_argument('input_directory', help='input directory, should ONLY contain .csv monthly categorised flow status (point data) files, see GitHub for examples.')   
 parser.add_argument('output_directory', help='directory files will be saved to as {date}.json')     
 
 args = parser.parse_args()
