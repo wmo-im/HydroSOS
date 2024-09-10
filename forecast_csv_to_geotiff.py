@@ -40,7 +40,7 @@ shapefile = args.shapefile
 forecastDate = datetime.strptime(args.forecast_start_date + '-01', "%Y-%m-%d")
 
 if args.forecast_length:
-    forecastLength=args.forecast_length
+    forecastLength=int(args.forecast_length)
 else: 
     print("No forecast length set, defaulting to 6 months.")
     forecastLength=6
@@ -86,7 +86,6 @@ for file in os.listdir(input_directory + '/counts/'):
                 # pivot the df to add to the smhi_counts_df as extra column per date
                 df2 = df.pivot_table(index='HYBAS_ID', columns='date', values='value')
                 smhi_counts_df = pd.concat([smhi_counts_df, df2])
-
 
 smhi_counts_df=smhi_counts_df.reset_index()
 smhi_counts_df['HYBAS_ID'] = smhi_counts_df['index'].fillna(0).astype('int')

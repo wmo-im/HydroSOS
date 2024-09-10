@@ -75,17 +75,38 @@ Example:
 
 The ```counts.csv``` file produced by ForecastCalc.py should be further processed into a .geotiff for visualisation on the portal map. This can be done using ```forecast_csv_to_geotiff.py``` which is run as follows:
 
-```python forecast_csv_to_geotiff.py input_dir output_dir shapefile forecast_start_date --forecastLength```
+```python forecast_csv_to_geotiff.py input_dir output_dir shapefile forecast_start_date --forecast_length```
 
-Where ```input_dir``` is the ```counts``` directory produced by ```ForecastCalc.py``` that contains the forecast category counts for different months, ```output_dir``` is where the geotiffs are written, ```shapefile``` is a path to the shapefile that defines the polygons corresponding to the forecast ID boundaries that will be drawn in the geotiff, forecast_start_date is the first forecast date formatted ```YYYY-MM``` and forecast_length is the number of months forecasts were made for (default 6).
+Where:
+*  ```input_dir``` is the ```counts``` directory produced by ```ForecastCalc.py``` that contains the forecast category counts for different months
+* ```output_dir``` is where the geotiffs are written
+* ```shapefile``` is a path to the shapefile that defines the polygons corresponding to the forecast ID boundaries that will be drawn in the geotiff
+*  ```forecast_start_date``` is the first forecast date formatted ```YYYY-MM``` 
+*  ```--forecast_length``` is the number of months forecasts were made for (default 6).
 
 Example: 
 
-```python forecast_csv_to_geotiff.py example_data/output_forecast/accumulated/counts example_data/output_geotiff example_data/basins.shp 2024-04 --forecastLength 6```
+```python forecast_csv_to_geotiff.py example_data/output_forecast/accumulated/ example_data/output_geotiff/ example_data/basins.shp 2024-02 --forecastLength 6```
 
 Info:
 
-The HydroBasins shapefile can be downloaded here: https://www.hydrosheds.org/products/hydrobasins#downloads, note each continental shapefile will need to be merged to create a global shapefile. 
+The HydroBasins shapefile can be downloaded here: https://www.hydrosheds.org/products/hydrobasins#downloads, note each continental shapefile will need to be merged to create a global shapefile. Download of merging of the Hydrosheds Hydrobasins data can be done using ```merge_hydrobasins.py```. 
 
+## merge_hydrobasins.py
+
+The Python script ```merge_hydrobasins.py``` provided in this repo will download and merge level 04 Hydrosheds Hydrobasins (from the link above) and merge them a single shapefile. 
+
+It should be run as follows:
+
+```python merge_hydrobasins.py directoryPath --download 1```
+
+Where: 
+
+* ```directoryPath``` is a path to where the shapefiles should be written to/read from.
+* ```--download``` is an optional argument, if it is set to ```1``` (default 0) the shapefiles will be downloaded to ```directoryPath```, else it is assumed the directory already contains the shapefiles to be merged.
+
+Info:
+
+This script will write a shapefile called ```merged_hydrobasins_level04.shp``` to ```directoryPath```. 
 
 Last-updated: 10/09/2024 EK
