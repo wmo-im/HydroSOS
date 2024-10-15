@@ -42,6 +42,7 @@ if args.download=="1":
     for key, value in zip(shapefileURLs.keys(),shapefileURLs.values()):
         print(f"Requesting {key} data.")
         r = requests.get(value, stream=True)
+        print(f"Extracting {key} data.")
         z = zipfile.ZipFile(BytesIO(r.content))
         z.extractall(args.directoryPath)
     print("Download complete")

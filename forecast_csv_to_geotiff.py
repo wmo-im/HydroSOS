@@ -82,7 +82,7 @@ for file in os.listdir(input_directory + '/counts/'):
                 # Map column names to their corresponding index numbers
                 column_mapping = {'notLow': 1, 'belNorm': 2, 'norm': 3, 'abNorm': 4, 'notHigh': 5}
                 # Create the new column with the index of the column with the greatest number
-                df['value'] = max_column.map(column_mapping).fillna(-999)
+                df['value'] = max_column.map(column_mapping).fillna(0)
                 # pivot the df to add to the smhi_counts_df as extra column per date
                 df2 = df.pivot_table(index='HYBAS_ID', columns='date', values='value')
                 smhi_counts_df = pd.concat([smhi_counts_df, df2])
@@ -110,8 +110,8 @@ for x in range (0, forecastLength+1):
         measurements=[date],
         fill=0,
         resolution=(-0.05, 0.05), #if the resolution is greater than 0.05 it falls over as too big a dataset.
-        rasterize_function=partial(rasterize_image, all_touched=True, dtype='int32')
+        rasterize_function=partial(rasterize_image, all_touched=True, dtype='int8')
     )
 
     #export the grid to a geotiff for the portal via mapserver (hydrosos_hydrobasins.map)
-    out_grid.rio.to_raster(output_geotiff, driver="COG", tiled=True, windowed=True,  dtype=rasterio.uint64)
+    out_grid.rio.to_raster(output_geotiff, driver="COG", tiled=True, windowed=True,  dtype=rasterio.uint8)
