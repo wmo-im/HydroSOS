@@ -39,13 +39,13 @@ parser.add_argument('status_input', help='path to status .nc file')
 parser.add_argument('forecast_input', help='path to forecast .nc file')    
 parser.add_argument('shapefile', help='path to the hydrosheds basin shapefile.')    
 parser.add_argument('outputPath', help='path to where data will be saved.')
+parser.add_argument('outlookDateFolder', help='name YYYY-MM of the date folder inside outputPath/outlook/ where outlook data will be saved.')
 
 #optional 
 parser.add_argument('--statusStart', help='YYYY-MM start of status data')   
 parser.add_argument('--statusEnd', help='YYYY-MM +1 end of status data')   
 parser.add_argument('--forecastStart', help='YYYY-MM start of forecast data')   
 parser.add_argument('--forecastEnd', help='YYYY-MM +1 end of forecast data')   
-
 
 #########################
 # Setup 
@@ -55,14 +55,16 @@ args = parser.parse_args()
 #make paths
 print('making filepaths')
 print()
-Path(f'{args.outputPath}/counts/status/outlast/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/counts/status/hydrosos/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/counts/forecast/outlast/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/counts/forecast/hydrosos/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/geotiff/status/outlast/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/geotiff/status/hydrosos/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/geotiff/forecast/outlast/').mkdir(parents=True, exist_ok=True)
-Path(f'{args.outputPath}/geotiff/forecast/hydrosos/').mkdir(parents=True, exist_ok=True)
+
+Path(f'{args.outputPath}/outlook/{args.outlookDateFolder}/counts/outlast/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/outlook/{args.outlookDateFolder}/counts/hydrosos/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/outlook/{args.outlookDateFolder}/geotiff/outlast/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/outlook/{args.outlookDateFolder}/geotiff/hydrosos/').mkdir(parents=True, exist_ok=True)
+
+Path(f'{args.outputPath}/status/counts/outlast/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/status/counts/hydrosos/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/status/geotiff/outlast/').mkdir(parents=True, exist_ok=True)
+Path(f'{args.outputPath}/status/geotiff/hydrosos/').mkdir(parents=True, exist_ok=True)
 
 gdf = gpd.read_file(args.shapefile, include_fields=['HYBAS_ID'])
 gdf['HYBAS_ID'] = gdf['HYBAS_ID'].astype('int').fillna(0)
@@ -99,11 +101,11 @@ for idx in range(0,data.variables['spi_OUTLAST'].shape[1]):
     # add one to the class so they span 1 - 11
     status['class'] = (data.variables['spi_OUTLAST'][:,idx]+1).filled(np.nan)
     status['class'] = status['class'].astype('Int64')
-    status.to_csv(f"{args.outputPath}/counts/status/outlast/{str(data.variables['basin_id'][idx])}_outlast_counts.csv", index=False)
+    status.to_csv(f"{args.outputPath}/status/counts/outlast/{str(data.variables['basin_id'][idx])}_outlast_counts.csv", index=False)
     # do the hydrosos classes
     status['class'] = (data.variables['spi_HydroSOS'][:,idx]+1).filled(np.nan)
     status['class'] = status['class'].astype('Int64')
-    status.to_csv(f"{args.outputPath}/counts/status/hydrosos/{str(data.variables['basin_id'][idx])}_hydrosos_counts.csv", index=False)
+    status.to_csv(f"{args.outputPath}/status/counts/hydrosos/{str(data.variables['basin_id'][idx])}_hydrosos_counts.csv", index=False)
 
 
 print('making status geotiff files')
@@ -121,7 +123,7 @@ for i in range(0,data.variables['spi_OUTLAST'].shape[0]):
     gdf_join = gdf.merge(status, left_on='HYBAS_ID', right_on='HYBAS_ID')
     #make geocube converts vector data to raster...
     #an 8 bit unsigned integer is enough to store all the data classes
-    output_geotiff = f"{args.outputPath}/geotiff/status/outlast/{status_daterange[i]}_outlast.tiff"
+    output_geotiff = f"{args.outputPath}/status/geotiff/outlast/{status_daterange[i]}_outlast.tiff"
     out_grid = make_geocube(
         vector_data=gdf_join,
         measurements=["class"],
@@ -138,7 +140,7 @@ for i in range(0,data.variables['spi_OUTLAST'].shape[0]):
     status['class'] = status['class'].astype(int)
     gdf_join = gdf.merge(status, left_on='HYBAS_ID', right_on='HYBAS_ID')
     #make geocube converts vector data to raster...
-    output_geotiff = f"{args.outputPath}/geotiff/status/hydrosos/{status_daterange[i]}_hydrosos.tiff"
+    output_geotiff = f"{args.outputPath}/status/geotiff/hydrosos/{status_daterange[i]}_hydrosos.tiff"
     out_grid = make_geocube(
         vector_data=gdf_join,
         measurements=["class"],
@@ -179,7 +181,7 @@ for idx in range(0,data.variables['spi_OUTLAST_cat0'].shape[1]):
     for i in range(1,12):
         forecast[f'Cat_{i}'] = (data.variables[f'spi_OUTLAST_cat{i-1}'][:,idx]).filled(np.nan)
         forecast[f'Cat_{i}'] = forecast[f'Cat_{i}'].astype('Int64')
-    forecast.to_csv(f"{args.outputPath}/counts/forecast/outlast/{str(data.variables['basin_id'][idx])}_outlast_counts.csv", index=False)
+    forecast.to_csv(f"{args.outputPath}/outlook/{args.outlookDateFolder}/counts/outlast/{str(data.variables['basin_id'][idx])}_outlast_counts.csv", index=False)
 
     # do the hydrosos classes
     forecast = pd.DataFrame(index=np.arange(0,len(forecast_daterange)))
@@ -188,7 +190,7 @@ for idx in range(0,data.variables['spi_OUTLAST_cat0'].shape[1]):
     for i in range(1,6):
         forecast[f'Cat_{i}'] = (data.variables[f'spi_HydroSOS_cat{i-1}'][:,idx]).filled(np.nan)
         forecast[f'Cat_{i}'] = forecast[f'Cat_{i}'].astype('Int64')
-    forecast.to_csv(f"{args.outputPath}/counts/forecast/hydrosos/{str(data.variables['basin_id'][idx])}_hydrosos_counts.csv", index=False)
+    forecast.to_csv(f"{args.outputPath}/outlook/{args.outlookDateFolder}/counts/hydrosos/{str(data.variables['basin_id'][idx])}_hydrosos_counts.csv", index=False)
 
 print('making forecast geotiff files')
 print()
@@ -204,7 +206,7 @@ for i in range(0,data.variables['spi_OUTLAST_cat0'].shape[0]):
     gdf_join = gdf.merge(forecast, left_on='HYBAS_ID', right_on='HYBAS_ID')
     #make geocube converts vector data to raster...
     #an 8 bit unsigned integer is enough to store all the data classes
-    output_geotiff = f"{args.outputPath}/geotiff/forecast/outlast/{forecast_daterange[i]}_outlast.tiff"
+    output_geotiff = f"{args.outputPath}/outlook/{args.outlookDateFolder}/geotiff/outlast/{forecast_daterange[i]}_outlast.tiff"
     out_grid = make_geocube(
         vector_data=gdf_join,
         measurements=["class"],
@@ -221,7 +223,7 @@ for i in range(0,data.variables['spi_OUTLAST_cat0'].shape[0]):
     forecast['class'] = forecast['class'].astype(int)
     gdf_join = gdf.merge(forecast, left_on='HYBAS_ID', right_on='HYBAS_ID')
     #make geocube converts vector data to raster...
-    output_geotiff = f"{args.outputPath}/geotiff/forecast/hydrosos/{forecast_daterange[i]}_hydrosos.tiff"
+    output_geotiff = f"{args.outputPath}/outlook/{args.outlookDateFolder}/geotiff/hydrosos/{forecast_daterange[i]}_hydrosos.tiff"
     out_grid = make_geocube(
         vector_data=gdf_join,
         measurements=["class"],
