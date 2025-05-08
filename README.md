@@ -7,10 +7,9 @@ If your data is ***status*** run ```status/statuscalc.py``` followed by ```statu
 
 If your data is ***forecast*** run ```forecast/forecastcalc.py``` followed by ```forecast/forecast_to_json.py``` for ***station data*** or ```forecast/forecast_to_geotiff.py``` for ***hydrobasin data***.
 
-On the HydroSOS web portal, the monthly flow category .csv files for each station (produced by statuscalc.py/forecastcalc.py) are displayed in timeseries graphs, whereas the .json/.geotiff files for each month are visualised on the map. 
-
-
 ![Code flowchart](flowchart.png)
+
+On the HydroSOS web portal, the monthly flow category .csv files for each station/hydrobasin (produced by statuscalc.py/forecastcalc.py) are displayed in timeseries graphs, whereas the .json/.geotiff files for each month are visualised on the map. 
 
 ## Status  
 
