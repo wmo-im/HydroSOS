@@ -109,8 +109,6 @@ Info:
 
 The HydroBasins shapefile can be downloaded here: https://www.hydrosheds.org/products/hydrobasins#downloads, note each continental shapefile will need to be merged to create a global shapefile. Download of merging of the Hydrosheds Hydrobasins data can be done using ```other/merge_hydrobasins.py```. 
 
-### ```
-
 ## Other
 
 ### ```other/merge_hydrobasins.py```
