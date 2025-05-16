@@ -24,7 +24,7 @@ It should be used as follows:
 
 For example: 
 
-``` python statuscalc.py ./example_data/status/input/ ./example_data/status/output_Python/ --startYear 1990 --endYear 2020 ```
+``` python status/statuscalc.py ./example_data/status/input/ ./example_data/status/output_Python/ --startYear 1990 --endYear 2020 ```
 
 
 Where:
@@ -81,7 +81,7 @@ This script will calculate the categories (same as those in StatusCalc) that the
 
 Example: 
 
-```python forecastcalc.py example_data/forecast/input/obs_dir example_data/forecast/input/forecast_dir  example_data/forecast/output/```
+```python forecast/forecastcalc.py example_data/forecast/input/obs_dir example_data/forecast/input/forecast_dir  example_data/forecast/output/```
 
 ### ```forecast/forecast_to_json.py```
 
