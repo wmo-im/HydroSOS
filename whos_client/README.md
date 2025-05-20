@@ -13,12 +13,12 @@ To facilitate interoperable timeseries data retrieval from the WHOS (WMO Hydrolo
 3. Explore WHOS portals and search engines to select the timeseries of interest
 
   - https://community.wmo.int/en/whos-portals
-  - https://whos.geodab.eu/gs-service/timeseries-api/whos.html
+  - https://whos.geodab.eu/gs-service/om-api
   - https://alerta.ina.gob.ar/wmlclient/wml/
   - http://whos.geodab.eu/gs-service/search?view=whos-plata
 
 
-4. Take note of the station/platform id (site) plus variable id (observed property), or the timeseries id (onlineId, CI_OnlineResource id)
+4. Take note of the feature id (site) plus observedProperty, or the observationIdentifier
 
 5. Use either a python script or notebook (see get_test.ipynb) or the command line interface to get the data (see get_test.sh) for a given time period
 
