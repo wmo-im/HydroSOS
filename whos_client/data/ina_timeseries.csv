@@ -1,4 +1,4 @@
-stream,station_name,station_id,variable,timeseries_identifier
+stream,station_name,station_id,variable,observation_identifier
 URUGUAY,Paso de los Libres,72,monthly discharge,8272678FE72DB91CD511E653099DB3219DEE615B
 URUGUAY,Santo Tomé,68,monthly discharge,18A95E501B2C4EEC191BE2215D87DDF107AF8A42
 URUGUAY,San Javier,65,monthly discharge,9DB2FD5D21BE8FFDF36B699E3CC607CD98FFFB03

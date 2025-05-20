@@ -9,3 +9,13 @@
 
 # jotter notebooks
 StatusCalc.ipynb
+
+# python libraries
+lib
+lib64
+include
+whos_client/lib
+whos_client/lib64
+whos_client/bin
+tests/__pycache__
+pyvenv.cfg
