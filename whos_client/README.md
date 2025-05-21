@@ -48,29 +48,76 @@ Output format is either:
         ...
 
 ### Command line interface
+data
+```text
+Usage: om_ogc_timeseries_client.py data [OPTIONS] BEGIN_POSITION END_POSITION
 
-    $ python3 om_ogc_timeseries_client.py --help
-    Usage: om_ogc_timeseries_client.py [OPTIONS] BEGIN_POSITION END_POSITION
+Options:
+  -t, --token TEXT                WHOS access token
+  -u, --url TEXT                  WHOS OM OGC timeseries API url
+  -o, --output TEXT               Save result into this file (instead of print
+                                  on stdout)
+  -c, --csv                       Use CSV format for output (instead of JSON)
+  -m, --monitoring_point TEXT     site identifier. It must be user together
+                                  with --variable_name
+  -v, --variable_name TEXT        variable identifier. It must be used
+                                  together with --monitoring_point
+  -s, --timeseries_identifier TEXT
+                                  timeseries identifier. If set,
+                                  --monitoring_point and --variable_name are
+                                  ignored
+  --help                          Show this message and exit.
+```
+metadata
+```text
+$ python om_ogc_timeseries_client.py metadata --help
+Usage: om_ogc_timeseries_client.py metadata [OPTIONS]
 
-    Options:
-      -t, --token TEXT                WHOS access token
-      -u, --url TEXT                  WHOS OM OGC timeseries API url
-      -o, --output TEXT               Save result into this file (instead of print
-                                      on stdout)
-      -c, --csv                       Use CSV format for output (instead of JSON)
-      -m, --monitoring_point TEXT     site identifier. It must be user together
-                                      with --variable_name
-      -v, --variable_name TEXT        variable identifier. It must be used
-                                      together with --monitoring_point
-      -s, --timeseries_identifier TEXT
-                                      timeseries identifier. If set,
-                                      --monitoring_point and --variable_name are
-                                      ignored
-      --help                          Show this message and exit.
-
+Options:
+  -t, --token TEXT                WHOS access token
+  -u, --url TEXT                  WHOS OM OGC timeseries API url
+  -o, --output TEXT               Save result into this file (instead of print
+                                  on stdout)
+  -m, --monitoring_point TEXT     site (feature) identifier. It must be user
+                                  together with --variable_name
+  -v, --variable_name TEXT        variable identifier (=observedProperty). It
+                                  must be used together with
+                                  --monitoring_point
+  -s, --timeseries_identifier TEXT
+                                  timeseries identifier. If set,
+                                  --monitoring_point and --variable_name are
+                                  ignored
+  -l, --limit INTEGER             pagination page size
+  -h, --has_data                  return only observations with data
+  -W, --west FLOAT                west longitude of bounding box
+  -S, --south FLOAT               south latitude of bounding box
+  -E, --east FLOAT                east longitude of bounding box
+  -N, --north FLOAT               north latitude of bounding box
+  -O, --ontology TEXT             The ontology to be used to expand the
+                                  observed property search term (or URI) with
+                                  additional terms from the ontology that are
+                                  synonyms and associated to narrower
+                                  concepts. Two ontologies are available: whos
+                                  or his-central
+  -V, --view TEXT                 Identifier of the data subset interesting
+                                  for the user
+  -T, --time_interpolation TEXT   The interpolation used on the time axis (for
+                                  example, MAX, MIN, TOTAL, AVERAGE, MAX_PREC,
+                                  MAX_SUCC, CONTINUOUS, ...)
+  -i, --intended_observation_spacing TEXT
+                                  The expected duration between individual
+                                  observations, expressed as ISO8601 duration
+                                  (e.g., P1D)
+  -a, --aggregation_duration TEXT
+                                  Time aggregation that has occurred to the
+                                  value in the timeseries, expressed as
+                                  ISO8601 duration (e.g., P1D)
+  -f, --format TEXT               Response format (e.g. JSON or CSV)
+  --help                          Show this message and exit.
+```
 ### Credits
 
-Programa de Sistemas de Alerta Hidrológico
+Programa de Sistemas de Información y Alerta Hidrológico de la Cuenca del Plata
 
 Laboratorio de Hidrología
 
@@ -78,5 +125,5 @@ Instituto Nacional del Agua
 
 Argentina
 
-2024-05-22
+2025-05-21
 

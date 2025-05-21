@@ -19,3 +19,6 @@ whos_client/lib64
 whos_client/bin
 tests/__pycache__
 pyvenv.cfg
+
+# vs code
+.vscode
