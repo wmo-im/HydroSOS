@@ -223,7 +223,7 @@ def getForecastCounts(percentiles, forecasts, bands):
         Ens_data_cat.loc[len(Ens_data_cat)] = output
     counts = pd.DataFrame(columns=['date','notLow','belNorm','norm','abNorm','notHigh'])
     for index, row in Ens_data_cat.iterrows():
-        counts.loc[len(counts)] = [row[0],sum(row==1),sum(row==2),sum(row==3),sum(row==4),sum(row==5)]
+        counts.loc[len(counts)] = [row.iloc[0],sum(row==1),sum(row==2),sum(row==3),sum(row==4),sum(row==5)]
     return counts
 
 
@@ -266,7 +266,7 @@ for id in catchmentIDs:
                 columns.append(ENS)
                 # open the forecast file and add it to the fullDF to export.
                 with open(forecast_directory+'/'+filename, mode="r") as fr:
-                    csvFile = pd.read_csv(fr, parse_dates=['Date'])
+                    csvFile = pd.read_csv(fr, parse_dates=['Date'],  date_format="%Y-%m")
                     df = pd.DataFrame(csvFile)
                     df['date'] = pd.to_datetime(df['Date'])
                     df['year'] = df['date'].dt.year.astype(float)
@@ -298,7 +298,7 @@ for id in catchmentIDs:
         #in status files, the first underscore split contains the catchment id
         if f.split('_')[1] == id:
             with open(f"{status_directory}/{f}", mode="r") as status_fr:
-                statusDF = pd.read_csv(status_fr, parse_dates=['Date'])
+                statusDF = pd.read_csv(status_fr, parse_dates=['Date'], date_format="%d/%m/%Y")
                 statusDF['date'] = pd.to_datetime(statusDF['Date'])
                 statusDF['year'] = statusDF['date'].dt.year.astype(float)
                 statusDF['month'] = statusDF['date'].dt.month.astype(float)
