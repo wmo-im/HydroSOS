@@ -87,6 +87,16 @@ Example:
 
 A Python script that converts the csv outputs of the forecastcalc.py script to json files for use in the HydroSOS web portal is also provided. It can process multiple files in one go.
 
+Use as follows:
+
+```python forecast_to_json.py input_directory output_directory```
+
+Where input directory is the ```counts``` directory in the output of ```forecasts/forecastcalc.py```.
+
+For example:
+
+```python forecast/forecast_to_json.py example_data/forecast/output/single/counts example_data/forecast/output/single```
+
 ### ```forecast/forecast_to_geotiff.py```
 
 The ```counts.csv``` file produced by forecastcalc.py should be further processed into a .geotiff for visualisation on the portal map. This can be done using ```forecast_csv_to_geotiff.py``` which is run as follows:
