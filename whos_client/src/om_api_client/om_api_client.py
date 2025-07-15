@@ -76,7 +76,7 @@ class OMObservation(TypedDict):
 class OMObservationCollection(TypedDict):
   id : Literal["observation collection"]
   member : List[OMObservation]
-class OmOgcTimeseriesClient:
+class OmApiClient:
 
     url : str
 
@@ -511,7 +511,7 @@ def data(token, url, output, csv, monitoring_point, variable_name, timeseries_id
         config["token"] = token
     if url is not None:
         config["token"] = token
-    client = OmOgcTimeseriesClient(config)
+    client = OmApiClient(config)
     data = client.getData(
         begin_position, 
         end_position,
@@ -557,7 +557,7 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
         config["token"] = token
     if url is not None:
         config["token"] = token
-    client = OmOgcTimeseriesClient(config)
+    client = OmApiClient(config)
     data = client.getTimeseriesWithPagination(
         feature = monitoring_point, 
         observedProperty = variable_name, 
@@ -604,7 +604,7 @@ def features(token, url, output, monitoring_point, variable_name, timeseries_ide
         config["token"] = token
     if url is not None:
         config["token"] = token
-    client = OmOgcTimeseriesClient(config)
+    client = OmApiClient(config)
     features = client.getFeaturesWithPagination(
         feature = monitoring_point, 
         observedProperty = variable_name, 

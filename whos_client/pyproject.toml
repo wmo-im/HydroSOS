@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "om-api-client"
+version = "0.0.0.dev1"
+description = "OGC Observations & Measurements  REST API (compliant with OM-JSON OGC DP 15-100r1 and GeoJSON, used by WMO WHOS DAB) client. Part of WMO HydroSOS project"
+authors = [
+    { name = "SSIyAH-INA", email = "jbianchi@ina.gob.ar" },
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "click",
+    "plotly",
+    "nbformat",
+    "pandas",
+    "requests",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/wmo-im/HydroSOS"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["om_api_client*"]
+
+[project.scripts]
+om-api-client = "om_api_client.om_api_client:cli"

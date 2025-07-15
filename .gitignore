@@ -17,6 +17,7 @@ include
 whos_client/lib
 whos_client/lib64
 whos_client/bin
+whos_client/src/om_api_client.egg-info
 tests/__pycache__
 pyvenv.cfg
 
