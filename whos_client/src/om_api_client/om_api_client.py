@@ -7,15 +7,15 @@ import json
 from pandas import DataFrame
 import sys
 import argparse
-
+import os
+from pathlib import Path
+import yaml
 from typing import List, TypedDict
 
-# class OMShape(TypedDict):
-#     coordinates : List[float]
-#     type : str
 class PointGeometry(TypedDict):
     type : Literal["Point"]
     coordinates : List[float]
+
 class OMFeatureParameter(TypedDict):
     name : str
     value : str
@@ -34,36 +34,47 @@ class OMFeature(TypedDict):
 
 class OMFeaturesResult(TypedDict):
     results: List[OMFeature]
+
 class PointFeature(TypedDict):
     geometry : PointGeometry
     properties : dict
+
 class GeoJSONPointsCollection(TypedDict):
     type : Literal["FeatureCollection"]
     features : List[PointFeature]
+
 class OMObservedProperty(TypedDict):
     href : str
     title : str
+
 class OMPhenomenonTime(TypedDict):
     end : str
     begin : str
+
 class OMFeatureOfInterest(TypedDict):
     href : str
+
 class OMInterpolationType(TypedDict):
     href : str
     title : str
+
 class OMObservationDefaultPointMetadata(TypedDict, total=False):
     uom : str
     aggregationDuration : str
     interpolationType : OMInterpolationType
+
 class OMObservationResult(TypedDict):
     metadata : dict
     defaultPointMetadata : OMObservationDefaultPointMetadata
+
 class OMTime(TypedDict):
     instant : str 
+
 class OMObservationPoint(TypedDict):
     shape : PointGeometry
     time : OMTime
     value : Union[int, float]
+
 class OMObservation(TypedDict):
     parameter : List[OMFeatureParameter]
     observedProperty : OMObservedProperty
@@ -73,9 +84,20 @@ class OMObservation(TypedDict):
     type : Literal["TimeSeriesObservation"]
     result : OMObservationResult
     points : List[OMObservationPoint]
+
 class OMObservationCollection(TypedDict):
   id : Literal["observation collection"]
   member : List[OMObservation]
+
+class OmApiClientConfig(TypedDict):
+    url : str
+    token : str
+    timeseries_max : int
+    timeseries_per_page : int
+    view : str
+    threshold_begin_date : Union[str, None]
+    pagination_limit : int
+
 class OmApiClient:
 
     url : str
@@ -92,7 +114,7 @@ class OmApiClient:
 
     pagination_limit : int
 
-    default_config : dict = {
+    default_config : OmApiClientConfig = {
         "url": 'https://gs-service-preproduction.geodab.eu/gs-service/services/essi', # 'https://whos.geodab.eu/gs-service/services/essi',
         "token": 'MY_TOKEN',
         "timeseries_max": 48000,
@@ -102,12 +124,35 @@ class OmApiClient:
         "pagination_limit": 1000
     }
 
-    def __init__(self, config : Union[dict,None] = None):
+    config_path = os.path.join(Path.home(),".om-api-client.yml")
+
+    def write_config(self, file_path : str = config_path, overwrite : bool = False, raise_if_exists : bool = False):
+        if os.path.exists(file_path) and overwrite is False:
+            if raise_if_exists:
+                raise ValueError("Config file already exists")
+        else:
+            yaml.dump(self.default_config, open(file_path,"w"), default_flow_style=False)
+            print("Default config file created: %s" % file_path)        
+
+    def read_config(self, file_path : str = config_path) -> OmApiClientConfig:
+        if not os.path.exists(file_path):
+            try:
+                self.write_config(file_path)
+            except FileNotFoundError as e:
+                print(str(e))
+                raise FileNotFoundError("File not found and can't be created: %s" % file_path)
+        config = yaml.load(open(file_path, "r"),Loader=yaml.CLoader)
+        return config
+
+    def __init__(self, config : Union[OmApiClientConfig,None] = None):
+        saved_config = self.read_config()
         for key, val in self.default_config.items():
             if config is not None and key in config:
-               setattr(self, key, config[key])
+                setattr(self, key, config[key])
+            elif key in saved_config:
+                setattr(self, key, saved_config[key])
             else:
-               setattr(self, key, val)
+                setattr(self, key, val)
 
     def getFeatures(
             self,
@@ -503,9 +548,10 @@ def cli():
 @click.option("-m","--monitoring_point",default=None,type=str,help="site identifier. It must be user together with --variable_name")
 @click.option("-v","--variable_name",default=None,type=str,help="variable identifier. It must be used together with --monitoring_point")
 @click.option("-s","--timeseries_identifier",default=None,type=str,help="timeseries identifier. If set, --monitoring_point and --variable_name are ignored")
+@click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D)")
 @click.argument("begin_position")
 @click.argument("end_position")
-def data(token, url, output, csv, monitoring_point, variable_name, timeseries_identifier, begin_position, end_position):
+def data(token, url, output, csv, monitoring_point, variable_name, timeseries_identifier, aggregation_duration, begin_position, end_position):
     config = {}
     if token is not None:
         config["token"] = token
@@ -517,7 +563,8 @@ def data(token, url, output, csv, monitoring_point, variable_name, timeseries_id
         end_position,
         feature = monitoring_point, 
         observedProperty = variable_name, 
-        observationIdentifier = timeseries_identifier
+        observationIdentifier = timeseries_identifier,
+        aggregationDuration=aggregation_duration
     )
     if output is not None:
         if csv:

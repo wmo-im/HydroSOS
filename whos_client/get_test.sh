@@ -1,12 +1,19 @@
+# retrieve data using feature id + variable id + aggregation duration (-m + -v + -a)
 # output json to stdout
-python3 om_ogc_timeseries_client.py data -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge 1990-01-01 2024-05-01
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M 1990-01-01 2024-05-01 
 # output to json file
-python3 om_ogc_timeseries_client.py data -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge 1990-01-01 2024-05-01 -o /tmp/data.json
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -o /tmp/data.json 1990-01-01 2024-05-01 
 # output csv to stdout
-python3 om_ogc_timeseries_client.py data -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge 1990-01-01 2024-05-01 -c
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -c 1990-01-01 2024-05-01 
 # output to csv file
-python3 om_ogc_timeseries_client.py data -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge 1990-01-01 2024-05-01 -o /tmp/data.csv -c
-# retrieve using timeseries id instead of site id + variable id
-python3 om_ogc_timeseries_client.py data -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -s 18EB307E3D1C45D3A2842D710A41001AB5083041 1990-01-01 2024-05-01
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -o /tmp/data.csv -c 1990-01-01 2024-05-01
+# retrieve using timeseries observation id (-s)
+om-api-client data -s 18EB307E3D1C45D3A2842D710A41001AB5083041 1990-01-01 2024-05-01
 # retrieve metadata
-python3 om_ogc_timeseries_client.py metadata -t whos-36e7d1a3-b61e-4ae0-aca4-60efe6f27361 -l 50 -v Discharge -o /tmp/whos_metadata.json
+om-api-client metadata -l 50 -v Discharge -o /tmp/whos_metadata.json
+# retrieve features
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.json
+# retrieve features as csv
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.csv -f csv
+# retrieve features as geojson
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.geojson -f geojson

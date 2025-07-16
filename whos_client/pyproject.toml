@@ -23,6 +23,7 @@ dependencies = [
     "nbformat",
     "pandas",
     "requests",
+    "pyyaml"
 ]
 
 [project.urls]

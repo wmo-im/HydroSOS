@@ -20,7 +20,7 @@ To facilitate interoperable timeseries data retrieval from the WHOS (WMO Hydrolo
 
 4. Take note of the feature id (site) plus observedProperty, or the observationIdentifier
 
-5. Use either a python script or notebook (see get_test.ipynb) or the command line interface to get the data (see get_test.sh) for a given time period
+5. Use either a python script or notebook (see examples below) or the command line interface to get the data (see examples below) for a given time period
 
 ### Installation
 
@@ -28,9 +28,15 @@ To facilitate interoperable timeseries data retrieval from the WHOS (WMO Hydrolo
     source bin/activate
     pip3 install .
 
+#### Config file location
+- **Linux**: $HOME/.om-api-client.yml
+- **Windows**: %USERPROFILE%/.om-api-client.yml 
+- **MacOS**: $HOME/.om-api-client.yml
+
+You can insert your access token and change other config parameters by editing the config file.
 ### Output
 
-Output format is either:
+Output format of <b>data</b> retrieval is either:
   - a JSON-serializable list of dicts:
 
         [
@@ -46,10 +52,393 @@ Output format is either:
         date,value
         string,float
         ...
+## Use
+### Python script / notebook
+```python
+from om_api_client import OmApiClient, timeseriesMetadataToDataFrame, featuresToDataFrame, featuresToGeoJSON
+import pandas
+import plotly.express as px
+import logging
+from datetime import datetime
+```
 
+parameters
+
+
+```python
+begin_date = "1990-01-01"
+end_date = str(datetime.now())[0:10]
+feature_id = "FAAC49BA633EFF325BE5D2BA81BE14574A268ABA"
+observation_identifiers_csv = "data/ina_timeseries.csv"
+observed_property = "Discharge"
+aggregation_duration = "P1M"
+```
+
+Instantiate client
+
+
+```python
+client = OmApiClient()
+```
+
+retrieve timeseries using site and variable ids
+
+
+```python
+
+ts_metadata = client.getTimeseries(
+    feature=feature_id,
+    observedProperty=observed_property,
+    aggregationDuration=aggregation_duration)
+```
+
+Inspect metadata
+
+
+```python
+len(ts_metadata["member"])
+```
+
+Select observation identifier
+
+
+```python
+observationIdentifier = ts_metadata["member"][0]["id"] # '18EB307E3D1C45D3A2842D710A41001AB5083041'
+```
+
+retrieve data
+
+
+```python
+
+data = client.getData(
+    begin_date, 
+    end_date,
+    observationIdentifier = observationIdentifier)
+```
+
+convert to dataframe and plot
+
+```python
+df = pandas.DataFrame(data)
+df["date"] = pandas.to_datetime(df["date"])
+df = df.set_index("date")
+px.line(df.reset_index(), x="date", y="value")
+```
+![plot one timeseries](https://raw.githubusercontent.com/wmo-im/HydroSOS/refs/heads/main/whos_client/img/plot_one_ts.png)
+
+
+read observation identifiers from csv, retrieve data and plot together
+
+```python
+from io import StringIO
+csv_data = """stream,station_name,station_id,variable,observation_identifier
+URUGUAY,Paso de los Libres,72,monthly discharge,8272678FE72DB91CD511E653099DB3219DEE615B
+URUGUAY,Santo Tomé,68,monthly discharge,18A95E501B2C4EEC191BE2215D87DDF107AF8A42
+URUGUAY,San Javier,65,monthly discharge,9DB2FD5D21BE8FFDF36B699E3CC607CD98FFFB03
+PARANA,Paraná,29,monthly discharge,B569750A1B728AB62D03460068CF80CCCD011D13
+PARANA,Santa Fe,30,monthly discharge,97A1C9210A637D94FB29B5BACB0500E0F353AB04
+PARANA,Barranqueras,20,monthly discharge,24F40961A057CE7DC723EE86BBA3B39729F03CBC
+"""
+stations = pandas.read_csv(StringIO(csv_data))
+df_list = []
+for index, row in stations.iterrows():
+    data = client.getData(
+        begin_date,
+        end_date, 
+        observationIdentifier = row["observation_identifier"])
+    df_ = pandas.DataFrame(data)
+    df_["station_name"] = row["station_name"]
+    df_list.append(df_)
+df = pandas.concat(df_list)
+px.line(df, x = "date", y = "value", color = "station_name")
+```
+![plot many timeseries](https://raw.githubusercontent.com/wmo-im/HydroSOS/refs/heads/main/whos_client/img/plot_many_ts.png)
+
+get metadata first page
+
+```python
+ts_metadata = client.getTimeseries(
+    observedProperty=observed_property,
+    limit=50)
+ts_metadata.keys() #  dict_keys(['id', 'member', 'completed', 'resumptionToken'])
+len(ts_metadata["member"]) # 50
+ts_metadata["completed"] # False
+```
+get metadata all pages
+
+```python
+ts_metadata = client.getTimeseriesWithPagination(
+    observedProperty=observed_property,
+    limit=50)
+len(ts_metadata["member"]) #  > 50
+df_ts = timeseriesMetadataToDataFrame(ts_metadata)
+df_ts.head(5)
+```
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>sourceId</th>
+      <th>observedProperty</th>
+      <th>beginDate</th>
+      <th>endDate</th>
+      <th>featureId</th>
+      <th>ObservationId</th>
+      <th>uom</th>
+      <th>interpolationType</th>
+      <th>aggregationDuration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>argentina-ina</td>
+      <td>Discharge, stream</td>
+      <td>2020-08-06T03:00:00Z</td>
+      <td>2020-08-31T03:00:00Z</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>04CE047C0DF5A150C3FD9F7FD9B75F7E6098EFC9</td>
+      <td>metros cúbicos por segundo</td>
+      <td>Continuous/Instantaneous</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>argentina-ina</td>
+      <td>Discharge, stream</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>33DC6C9A6EC6777C8C1E57391C0539749DC40BE3</td>
+      <td>metros cúbicos por segundo</td>
+      <td>Average in succeeding interval</td>
+      <td>P1M</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>argentina-ina</td>
+      <td>Discharge, stream</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>363201EC2149C679D5A7A65C126916A13FABDD5D</td>
+      <td>metros cúbicos por segundo</td>
+      <td>Average in succeeding interval</td>
+      <td>P1M</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>argentina-ina</td>
+      <td>Discharge, stream</td>
+      <td>2020-08-06T03:00:00Z</td>
+      <td>2020-08-31T03:00:00Z</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>68DA7DC5CB959B851B4461E8CA6A875790B8F919</td>
+      <td>metros cúbicos por segundo</td>
+      <td>Average in succeeding interval</td>
+      <td>P1D</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>argentina-ina</td>
+      <td>Discharge, stream</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>2020-08-01T03:00:00Z</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>D170EC5D1100F30D913E60AE223E44DDDCCC7078</td>
+      <td>metros cúbicos por segundo</td>
+      <td>Average in succeeding interval</td>
+      <td>P1M</td>
+    </tr>
+  </tbody>
+</table>
+<p>5 rows × 9 columns</p>
+</div>
+
+get features first page
+
+```python
+features = client.getFeatures(
+    observedProperty=observed_property,
+    limit=50)
+```
+get features with pagination
+```python
+features = client.getFeaturesWithPagination(
+    observedProperty=observed_property,
+    limit=50)
+features["results"][0]
+```
+```json
+{
+  "shape": {
+    "coordinates": [-57.938011, -31.273969], 
+    "type": "Point"
+  },
+  "parameter": 
+    [
+      {
+        "name": "country", 
+        "value": "Argentina"
+      },
+      {
+        "name": "source", 
+        "value": "Argentina, Instituto Nacional del Agua (INA)"
+      },
+      {
+        "name": "sourceId", 
+        "value": "argentina-ina"
+      },
+      {
+        "name": "identifier", 
+        "value": "argentina-ina:alturas_prefe:89"
+      }
+    ],
+  "name": "Aporte Salto Grande",
+  "id": "00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C",
+  "relatedParty": []}
+```
+```python
+df_features = featuresToDataFrame(features)
+df_features.head(5)
+```
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>longitude</th>
+      <th>latitude</th>
+      <th>country</th>
+      <th>sourceId</th>
+      <th>identifier</th>
+      <th>name</th>
+      <th>id</th>
+      <th>author</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>-57.938011</td>
+      <td>-31.273969</td>
+      <td>Argentina</td>
+      <td>argentina-ina</td>
+      <td>argentina-ina:alturas_prefe:89</td>
+      <td>Aporte Salto Grande</td>
+      <td>00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>-60.780556</td>
+      <td>-31.491222</td>
+      <td>Argentina</td>
+      <td>argentina-ina</td>
+      <td>argentina-ina:alturas_bdhi:103</td>
+      <td>Recreo - Ruta Provincial nº 70</td>
+      <td>02E07E2F72A815E237B7896D79BC68193EF3A0A6</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>-58.558333</td>
+      <td>-28.995000</td>
+      <td>Argentina</td>
+      <td>argentina-ina</td>
+      <td>argentina-ina:sat2:2832</td>
+      <td>Corriente - Paso Lucero</td>
+      <td>083988DC8C2E39D6E0C82B296A857F6A088B8028</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>-57.633333</td>
+      <td>-30.250000</td>
+      <td>Argentina</td>
+      <td>argentina-ina</td>
+      <td>argentina-ina:alturas_prefe:74</td>
+      <td>Monte Caseros</td>
+      <td>0DF4C4284AA14E0A545C0F855B4F6FF558693CEE</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>-55.883333</td>
+      <td>-27.366667</td>
+      <td>Argentina</td>
+      <td>argentina-ina</td>
+      <td>argentina-ina:alturas_prefe:14</td>
+      <td>Posadas</td>
+      <td>23137FB463C0902450418E9E2F0D38C719419AA9</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+```python
+featuresToGeoJSON(features)
+```
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [-57.938011, -31.273969],
+        "type": "Point"
+      },
+      "properties": {
+        "longitude": -57.938011,
+        "latitude": -31.273969,
+        "country": "Argentina",
+        "sourceId": "argentina-ina",
+        "identifier": "argentina-ina:alturas_prefe:89",
+        "name": "Aporte Salto Grande",
+        "id": "00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C",
+        "author": None
+      }
+    },
+    ...
+  ]
+}
+```
+```python
+px.scatter(featuresToDataFrame(features), "longitude", "latitude", hover_name = "name", title = "features")
+```
 ### Command line interface
-data
+#### data
 ```text
+$ om-api-client data --help
 Usage: om-api-client data [OPTIONS] BEGIN_POSITION END_POSITION
 
 Options:
@@ -66,9 +455,26 @@ Options:
                                   timeseries identifier. If set,
                                   --monitoring_point and --variable_name are
                                   ignored
+  -a, --aggregation_duration TEXT
+                                  aggregation duration ISO code. i.e. P1M,
+                                  P1D, P6H
   --help                          Show this message and exit.
 ```
-metadata
+examples
+```bash
+# retrieve data using feature id + variable id + aggregation duration (-m + -v + -a)
+# output json to stdout
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M 1990-01-01 2024-05-01 
+# output to json file
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -o /tmp/data.json 1990-01-01 2024-05-01 
+# output csv to stdout
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -c 1990-01-01 2024-05-01 
+# output to csv file
+om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -o /tmp/data.csv -c 1990-01-01 2024-05-01
+# retrieve using timeseries observation id (-s)
+om-api-client data -s 18EB307E3D1C45D3A2842D710A41001AB5083041 1990-01-01 2024-05-01
+```
+#### metadata
 ```text
 $ om-api-client metadata --help
 Usage: om-api-client metadata [OPTIONS]
@@ -115,7 +521,12 @@ Options:
   -f, --format TEXT               Response format (e.g. JSON or CSV)
   --help                          Show this message and exit.
 ```
-features
+examples
+```bash
+# retrieve timeseries observations metadata with variable name filter (-v) and custom page size (-l)
+om-api-client metadata -l 50 -v Discharge -o /tmp/whos_metadata.json
+```
+#### features (monitoring points)
 ```text
 $ om-api-client features --help
 Usage: om-api-client features [OPTIONS]
@@ -161,6 +572,15 @@ Options:
   -f, --format TEXT               Response format (e.g. JSON (raw), GeoJSON or
                                   CSV)
   --help                          Show this message and exit.
+```
+examples
+```bash
+# retrieve features with variable name filter (-v) and custom page size (-l)
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.json
+# retrieve features as csv
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.csv -f csv
+# retrieve features as geojson
+om-api-client features -l 50 -v Discharge -o /tmp/whos_features.geojson -f geojson
 ```
 ### Credits
 
