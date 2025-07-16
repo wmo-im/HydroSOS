@@ -176,19 +176,6 @@ df_ts = timeseriesMetadataToDataFrame(ts_metadata)
 df_ts.head(5)
 ```
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -318,19 +305,6 @@ df_features = featuresToDataFrame(features)
 df_features.head(5)
 ```
 <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -425,7 +399,7 @@ featuresToGeoJSON(features)
         "identifier": "argentina-ina:alturas_prefe:89",
         "name": "Aporte Salto Grande",
         "id": "00D3297FBC6A70359AC9C78EC0A56AE2EBBD8B6C",
-        "author": None
+        "author": null
       }
     },
     ...
