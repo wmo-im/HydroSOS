@@ -23,11 +23,9 @@ To facilitate interoperable timeseries data retrieval from the WHOS (WMO Hydrolo
 5. Use either a python script or notebook (see examples below) or the command line interface to get the data (see examples below) for a given time period
 
 ### Installation
-
-    python3 -m venv .
-    source bin/activate
-    pip3 install .
-
+```bash
+pip install om-api-client
+```
 #### Config file location
 - **Linux**: $HOME/.om-api-client.yml
 - **Windows**: %USERPROFILE%/.om-api-client.yml 
@@ -409,6 +407,8 @@ featuresToGeoJSON(features)
 ```python
 px.scatter(featuresToDataFrame(features), "longitude", "latitude", hover_name = "name", title = "features")
 ```
+![plot features](https://raw.githubusercontent.com/wmo-im/HydroSOS/refs/heads/main/whos_client/img/plot_features.png)
+
 ### Command line interface
 #### data
 ```text
@@ -543,6 +543,10 @@ Options:
                                   Time aggregation that has occurred to the
                                   value in the timeseries, expressed as
                                   ISO8601 duration (e.g., P1D)
+  -F, --filter KEY=VALUE          Set additional filters as key=value. Valid
+                                  keys: beginPosition, endPosition,
+                                  spatialRelation, predefinedLayer, country,
+                                  provider
   -f, --format TEXT               Response format (e.g. JSON (raw), GeoJSON or
                                   CSV)
   --help                          Show this message and exit.
@@ -551,10 +555,14 @@ examples
 ```bash
 # retrieve features with variable name filter (-v) and custom page size (-l)
 om-api-client features -l 50 -v Discharge -o /tmp/whos_features.json
-# retrieve features as csv
+# as csv
 om-api-client features -l 50 -v Discharge -o /tmp/whos_features.csv -f csv
-# retrieve features as geojson
+# as geojson
 om-api-client features -l 50 -v Discharge -o /tmp/whos_features.geojson -f geojson
+# with country filter (-F country=)
+om-api-client features -l 50 -F country=ARG -o /tmp/whos_features.json
+# with provider filter (-F provider=)
+om-api-client features -l 50 -F provider=argentina-ina -o /tmp/whos_features.json
 ```
 ### Credits
 

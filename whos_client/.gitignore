@@ -6,3 +6,5 @@ __pycache__
 pyvenv.cfg
 share
 etc
+src/om_api_client.egg-info
+dist

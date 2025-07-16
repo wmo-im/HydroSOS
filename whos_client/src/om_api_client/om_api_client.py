@@ -627,6 +627,36 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
     else:
         click.echo(json.dumps(data, ensure_ascii=False))
 
+FEATURE_VALID_FILTERS = {
+    "beginPosition": str,
+    "endPosition": str,
+    "spatialRelation": str,
+    "predefinedLayer": str,
+    "country": str,
+    "provider": str
+}
+
+class KeyValueType(click.ParamType):
+    name = "key=value"
+
+    def convert(self, value, param, ctx):
+        if "=" not in value:
+            self.fail(f"Invalid format: '{value}'. Use key=value.", param, ctx)
+
+        key, val = value.split("=", 1)
+
+        if key not in FEATURE_VALID_FILTERS:
+            self.fail(f"Invalid key: '{key}'. Allowed keys: {', '.join(FEATURE_VALID_FILTERS)}", param, ctx)
+
+        try:
+            casted = FEATURE_VALID_FILTERS[key](val)
+        except Exception as e:
+            self.fail(f"Failed to convert value for key '{key}': {e}", param, ctx)
+
+        return key, casted
+
+key_value_type = KeyValueType()
+
 @cli.command()
 @click.option('-t','--token', default=None, type=str, help='WHOS access token')
 @click.option('-u','--url', default=None, type=str, help='WHOS OM OGC timeseries API url')
@@ -644,13 +674,15 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
 @click.option("-T","--time_interpolation",default=None,type=str,help="The interpolation used on the time axis (for example, MAX, MIN, TOTAL, AVERAGE, MAX_PREC, MAX_SUCC, CONTINUOUS, ...)")
 @click.option("-i","--intended_observation_spacing",default=None,type=str,help="The expected duration between individual observations, expressed as ISO8601 duration (e.g., P1D)")
 @click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D)")
+@click.option("-F","--filter", type=key_value_type, multiple=True, help="Set additional filters as key=value. Valid keys: %s" % ", ".join(FEATURE_VALID_FILTERS.keys()))
 @click.option("-f","--format",default="json",type=str,help="Response format (e.g. JSON (raw), GeoJSON or CSV)")
-def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, format):
+def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format):
     config = {}
     if token is not None:
         config["token"] = token
     if url is not None:
         config["token"] = token
+    parsed_filter = {k: v for k, v in filter} if filter is not None else None
     client = OmApiClient(config)
     features = client.getFeaturesWithPagination(
         feature = monitoring_point, 
@@ -665,7 +697,8 @@ def features(token, url, output, monitoring_point, variable_name, timeseries_ide
         ontology = ontology, 
         timeInterpolation = time_interpolation, 
         intendedObservationSpacing = intended_observation_spacing, 
-        aggregationDuration = aggregation_duration
+        aggregationDuration = aggregation_duration,
+        **parsed_filter
     )
     if output is not None:
         if format.lower() == "csv":
