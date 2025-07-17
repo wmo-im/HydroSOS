@@ -92,11 +92,9 @@ class OMObservationCollection(TypedDict):
 class OmApiClientConfig(TypedDict):
     url : str
     token : str
-    timeseries_max : int
-    timeseries_per_page : int
     view : str
     threshold_begin_date : Union[str, None]
-    pagination_limit : int
+    page_size : int
 
 class OmApiClient:
 
@@ -112,16 +110,14 @@ class OmApiClient:
 
     threshold_begin_date : str
 
-    pagination_limit : int
+    page_size : int
 
     default_config : OmApiClientConfig = {
         "url": 'https://gs-service-preproduction.geodab.eu/gs-service/services/essi', # 'https://whos.geodab.eu/gs-service/services/essi',
         "token": 'MY_TOKEN',
-        "timeseries_max": 48000,
-        "timeseries_per_page": 400,
         "view": 'whos-plata',
         "threshold_begin_date": None,
-        "pagination_limit": 1000
+        "page_size": 1000
     }
 
     config_path = os.path.join(Path.home(),".om-api-client.yml")
@@ -181,7 +177,7 @@ class OmApiClient:
 
         profiler_path =  "timeseries-api/monitoring-points" if profiler == "timeseries-api" else "om-api/features"        
         view = view if view is not None else self.view
-        limit = limit if limit is not None else self.pagination_limit
+        limit = limit if limit is not None else self.page_size
         url = "%s/token/%s/view/%s/%s" % (self.url, self.token, view, profiler_path)
         logging.debug("url: %s" % url)
         params = {
@@ -232,7 +228,8 @@ class OmApiClient:
         is_last = False
         resumption_token = None
         while not is_last:
-            result = method(**kwargs, resumptionToken=resumption_token)
+            kwargs_ = {"resumptionToken": resumption_token, **kwargs}
+            result = method(**kwargs_)
             if result_list_property not in result:
                 is_last = True
             else:
@@ -307,6 +304,8 @@ class OmApiClient:
             observedProperty : Union[str,None] = None,
             timeInterpolation : Union[str,None] = None,
             intendedObservationSpacing : Union[str,None] = None,
+            country: Union[str,None] = None,
+            provider: Union[str,None] = None,
             aggregationDuration : Union[str,None] = None,
             includeData : Union[bool,None] = None,
             asynchDownload : Union[bool,None] = None,
@@ -314,7 +313,7 @@ class OmApiClient:
 
         profiler_path =  "timeseries-api/timeseries" if profiler == "timeseries-api" else "om-api/observations"        
         view = view if view is not None else self.view
-        limit = limit if limit is not None else self.pagination_limit
+        limit = limit if limit is not None else self.page_size
         url = "%s/token/%s/view/%s/%s" % (self.url, self.token, view, profiler_path)
         logging.debug("url: %s" % url)
         params : dict[str, Any] 
@@ -343,6 +342,8 @@ class OmApiClient:
                 "timeInterpolation": timeInterpolation,
                 "intendedObservationSpacing": intendedObservationSpacing,
                 "aggregationDuration": aggregationDuration,
+                "country": country,
+                "provider": provider,
                 "includeData": includeData,
                 "asynchDownload": asynchDownload,
                 "useCache": useCache,
@@ -356,7 +357,11 @@ class OmApiClient:
             params)
         if response.status_code != 200:
             raise ValueError("request failed, status code: %s, message: %s" % (response.status_code, response.text))
-        result = response.json()
+        try:
+            result = response.json()
+        except json.JSONDecodeError as e:
+            logging.error("JSONDecodeError. Invalid response: %s" % response.text)
+            raise e
         if has_data and "member" in result:
             result["member"] = self.filterByAvailability(result["member"],self.threshold_begin_date)
         return result
@@ -524,12 +529,55 @@ def featuresToGeoJSON(features_result : OMFeaturesResult) -> GeoJSONPointsCollec
 # def timeseriesMetadataToDataFrame(ts_metadata : dict) -> DataFrame:
 #     return DataFrame([flattenTimeseriesMetadata(md) for md in ts_metadata["member"]])
 
+OBSERVATION_VALID_FILTERS = {
+    "country": str,
+    "provider": str
+}
+
+FEATURE_VALID_FILTERS = {
+    "beginPosition": str,
+    "endPosition": str,
+    "spatialRelation": str,
+    "predefinedLayer": str,
+    "country": str,
+    "provider": str
+}
+
+class KeyValueType(click.ParamType):
+    name = "key=value"
+
+    valid_filters : dict
+
+    def __init__(self, valid_filters):
+        super().__init__()
+        self.valid_filters = valid_filters
+
+    def convert(self, value, param, ctx):
+        if "=" not in value:
+            self.fail(f"Invalid format: '{value}'. Use key=value.", param, ctx)
+
+        key, val = value.split("=", 1)
+
+        if key not in self.valid_filters:
+            self.fail(f"Invalid key: '{key}'. Allowed keys: {', '.join(self.valid_filters)}", param, ctx)
+
+        try:
+            casted = self.valid_filters[key](val)
+        except Exception as e:
+            self.fail(f"Failed to convert value for key '{key}': {e}", param, ctx)
+
+        return key, casted
+
+observation_filter_value_type = KeyValueType(OBSERVATION_VALID_FILTERS)
+feature_filter_value_type = KeyValueType(FEATURE_VALID_FILTERS)
+
+
 def parse_first_arg():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["data", "metadata", "features"],
+        choices=["data", "metadata", "features","init"],
         default="data",
         help="Command to run. Default is 'data'."
     )
@@ -598,14 +646,19 @@ def data(token, url, output, csv, monitoring_point, variable_name, timeseries_id
 @click.option("-i","--intended_observation_spacing",default=None,type=str,help="The expected duration between individual observations, expressed as ISO8601 duration (e.g., P1D)")
 @click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D)")
 @click.option("-f","--format",default=None,type=str,help="Response format (e.g. JSON or CSV)")
-def metadata(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, has_data, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, format):
+@click.option("-F","--filter", type=observation_filter_value_type, multiple=True, help="Set additional filters as key=value. Valid keys: %s" % ", ".join(OBSERVATION_VALID_FILTERS.keys()))
+@click.option("-1", "--first_page_only",is_flag=True,help="Retrieve only first page.")
+@click.option("-r", "--resumption_token", type=str, default=None, help="Retrieve next page using the provided resumption token")
+def metadata(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, has_data, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token):
     config = {}
     if token is not None:
         config["token"] = token
     if url is not None:
         config["token"] = token
+    parsed_filter = {k: v for k, v in filter} if filter is not None else None
     client = OmApiClient(config)
-    data = client.getTimeseriesWithPagination(
+    retrieve_method = client.getTimeseries if first_page_only or resumption_token is not None else client.getTimeseriesWithPagination
+    data = retrieve_method(
         feature = monitoring_point, 
         observedProperty = variable_name, 
         observationIdentifier = timeseries_identifier,
@@ -619,43 +672,22 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
         ontology = ontology, 
         timeInterpolation = time_interpolation, 
         intendedObservationSpacing = intended_observation_spacing, 
-        aggregationDuration = aggregation_duration, 
-        format = format
+        aggregationDuration = aggregation_duration,
+        resumptionToken = resumption_token,
+        **parsed_filter
     )
     if output is not None:
-        json.dump(data, open(output, "w"), ensure_ascii=False)
+        if format is not None and format == "csv":
+            df = timeseriesMetadataToDataFrame(data)
+            df.to_csv(open(output, "w"), index=False)
+        else:
+            json.dump(data, open(output, "w"), ensure_ascii=False)
     else:
-        click.echo(json.dumps(data, ensure_ascii=False))
-
-FEATURE_VALID_FILTERS = {
-    "beginPosition": str,
-    "endPosition": str,
-    "spatialRelation": str,
-    "predefinedLayer": str,
-    "country": str,
-    "provider": str
-}
-
-class KeyValueType(click.ParamType):
-    name = "key=value"
-
-    def convert(self, value, param, ctx):
-        if "=" not in value:
-            self.fail(f"Invalid format: '{value}'. Use key=value.", param, ctx)
-
-        key, val = value.split("=", 1)
-
-        if key not in FEATURE_VALID_FILTERS:
-            self.fail(f"Invalid key: '{key}'. Allowed keys: {', '.join(FEATURE_VALID_FILTERS)}", param, ctx)
-
-        try:
-            casted = FEATURE_VALID_FILTERS[key](val)
-        except Exception as e:
-            self.fail(f"Failed to convert value for key '{key}': {e}", param, ctx)
-
-        return key, casted
-
-key_value_type = KeyValueType()
+        if format is not None and format == "csv":
+            df = timeseriesMetadataToDataFrame(data)
+            click.echo(df.to_csv(index=False))
+        else:
+            click.echo(json.dumps(data, ensure_ascii=False))
 
 @cli.command()
 @click.option('-t','--token', default=None, type=str, help='WHOS access token')
@@ -674,9 +706,11 @@ key_value_type = KeyValueType()
 @click.option("-T","--time_interpolation",default=None,type=str,help="The interpolation used on the time axis (for example, MAX, MIN, TOTAL, AVERAGE, MAX_PREC, MAX_SUCC, CONTINUOUS, ...)")
 @click.option("-i","--intended_observation_spacing",default=None,type=str,help="The expected duration between individual observations, expressed as ISO8601 duration (e.g., P1D)")
 @click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D)")
-@click.option("-F","--filter", type=key_value_type, multiple=True, help="Set additional filters as key=value. Valid keys: %s" % ", ".join(FEATURE_VALID_FILTERS.keys()))
+@click.option("-F","--filter", type=feature_filter_value_type, multiple=True, help="Set additional filters as key=value. Valid keys: %s" % ", ".join(FEATURE_VALID_FILTERS.keys()))
 @click.option("-f","--format",default="json",type=str,help="Response format (e.g. JSON (raw), GeoJSON or CSV)")
-def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format):
+@click.option("-1", "--first_page_only", is_flag=True, help="Retrieve only first page.")
+@click.option("-r", "--resumption_token", type=str, default=None, help="Retrieve next page using the provided resumption token")
+def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token):
     config = {}
     if token is not None:
         config["token"] = token
@@ -684,7 +718,8 @@ def features(token, url, output, monitoring_point, variable_name, timeseries_ide
         config["token"] = token
     parsed_filter = {k: v for k, v in filter} if filter is not None else None
     client = OmApiClient(config)
-    features = client.getFeaturesWithPagination(
+    retrieve_method = client.getFeatures if first_page_only or resumption_token is not None else client.getFeaturesWithPagination
+    features = retrieve_method(
         feature = monitoring_point, 
         observedProperty = variable_name, 
         observationIdentifier = timeseries_identifier,
@@ -698,6 +733,7 @@ def features(token, url, output, monitoring_point, variable_name, timeseries_ide
         timeInterpolation = time_interpolation, 
         intendedObservationSpacing = intended_observation_spacing, 
         aggregationDuration = aggregation_duration,
+        resumptionToken = resumption_token,
         **parsed_filter
     )
     if output is not None:
@@ -716,6 +752,11 @@ def features(token, url, output, monitoring_point, variable_name, timeseries_ide
             click.echo(json.dumps(featuresToGeoJSON(features), ensure_ascii=False))
         else:
             click.echo(json.dumps(features, ensure_ascii=False))
+
+@cli.command()
+def init():
+    client = OmApiClient()
+    logging.info("om-api-client config file created at %s" % client.config_path)    
 
 if __name__ == '__main__':
     command, remaining = parse_first_arg()

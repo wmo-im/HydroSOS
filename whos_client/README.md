@@ -2,29 +2,45 @@
 
 ### Purpose
 
-To facilitate interoperable timeseries data retrieval from the WHOS (WMO Hydrological Observations System). 
+To facilitate interoperable timeseries data & metadata retrieval from the WHOS (WMO Hydrological Observations System) DAB (Data Access Broker) using the [OM (OGC Observations & Measurements) API](https://whos.geodab.eu/gs-service/om-api). 
 
-### How to use
+### Features
+- Features (monitoring points) retrieval
+- Timeseries observations metadata retrieval
+- Timeseries observations data retrieval
+- Deals with pagination (retrieves next page until last). Optionally retrieve only first n records
+- Data/metadata filtering by feature, variable, spatial bounding box, time period, interpolation type, aggregation duration, and others (implements all OM-API filters)
+- convert to pandas DataFrame, GeoJSON and CSV
+- may be used as:
+  - import module in python, or
+  - CLI (Command Line Interface)
 
-1. Install this module (see Installation)
+### TO DO
+- properties retrieval
+- bulk data download (multiple timeseries observations)
+### How to use to retrieve WHOS data
 
-2. Register into WHOS and save your access token
+1. [Register into WHOS](https://whos.geodab.eu/gs-service/whos/registration.html) and save your access token
 
-3. Explore WHOS portals and search engines to select the timeseries of interest
+2. Install this module (see Installation)
+
+3. Explore WHOS portals and search engines to discover the timeseries of interest
 
   - https://community.wmo.int/en/whos-portals
   - https://whos.geodab.eu/gs-service/om-api
   - https://alerta.ina.gob.ar/wmlclient/wml/
-  - http://whos.geodab.eu/gs-service/search?view=whos-plata
+  - https://whos.geodab.eu/gs-service/whos/search
 
+4. Alternatively, retrieve features and timeseries observation metadata as shown in the examples below
 
-4. Take note of the feature id (site) plus observedProperty, or the observationIdentifier
+5. Take note of the feature id (site) plus observedProperty, or the observationIdentifier of the timeseries of interest
 
-5. Use either a python script or notebook (see examples below) or the command line interface to get the data (see examples below) for a given time period
+6. Use either a python script or notebook or the CLI to get the data (see examples below) for a given time period
 
 ### Installation
 ```bash
 pip install om-api-client
+om-api-client init # creates config file (with default values)
 ```
 #### Config file location
 - **Linux**: $HOME/.om-api-client.yml
@@ -493,12 +509,19 @@ Options:
                                   value in the timeseries, expressed as
                                   ISO8601 duration (e.g., P1D)
   -f, --format TEXT               Response format (e.g. JSON or CSV)
+  -F, --filter KEY=VALUE          Set additional filters as key=value. Valid
+                                  keys: country, provider
+  -1, --first_page_only           Retrieve only first page.
+  -r, --resumption_token TEXT     Retrieve next page using the provided
+                                  resumption token
   --help                          Show this message and exit.
 ```
 examples
 ```bash
 # retrieve timeseries observations metadata with variable name filter (-v) and custom page size (-l)
 om-api-client metadata -l 50 -v Discharge -o /tmp/whos_metadata.json
+# with provider (-F provider=), variable name (-v), ontology (-O). Retrieve first 10 records (-1 -l 10), save as csv (-f csv)
+om-api-client metadata -F provider=brazil-inmet -v Precipitation -O whos -1 -l 10 -o /tmp/md_inmet.csv -f csv
 ```
 #### features (monitoring points)
 ```text
@@ -549,6 +572,9 @@ Options:
                                   provider
   -f, --format TEXT               Response format (e.g. JSON (raw), GeoJSON or
                                   CSV)
+  -1, --first_page_only           Retrieve only first page.
+  -r, --resumption_token TEXT     Retrieve next page using the provided
+                                  resumption token
   --help                          Show this message and exit.
 ```
 examples
