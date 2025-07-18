@@ -446,8 +446,13 @@ Options:
                                   --monitoring_point and --variable_name are
                                   ignored
   -a, --aggregation_duration TEXT
-                                  aggregation duration ISO code. i.e. P1M,
-                                  P1D, P6H
+                                  Time aggregation that has occurred to the
+                                  value in the timeseries, expressed as
+                                  ISO8601 duration (e.g., P1D)
+  -d, --debug                     Log debug messages
+  -r, --recursive                 Get data recursively until endPosition is
+                                  reached. The API has a is a limit of 5000
+                                  records per request
   --help                          Show this message and exit.
 ```
 examples
@@ -463,6 +468,8 @@ om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P
 om-api-client data -m FAAC49BA633EFF325BE5D2BA81BE14574A268ABA -v Discharge -a P1M -o /tmp/data.csv -c 1990-01-01 2024-05-01
 # retrieve using timeseries observation id (-s)
 om-api-client data -s 18EB307E3D1C45D3A2842D710A41001AB5083041 1990-01-01 2024-05-01
+# retrieve recursively (-r). Sends additional requests until end date is reached
+om-api-client data -s 18EB307E3D1C45D3A2842D710A41001AB5083041 1990-01-01 2024-05-01 -r
 ```
 #### metadata
 ```text
@@ -514,6 +521,7 @@ Options:
   -1, --first_page_only           Retrieve only first page.
   -r, --resumption_token TEXT     Retrieve next page using the provided
                                   resumption token
+  -d, --debug                     Log debug messages
   --help                          Show this message and exit.
 ```
 examples
@@ -575,6 +583,7 @@ Options:
   -1, --first_page_only           Retrieve only first page.
   -r, --resumption_token TEXT     Retrieve next page using the provided
                                   resumption token
+  -d, --debug                     Log debug messages
   --help                          Show this message and exit.
 ```
 examples
@@ -589,6 +598,37 @@ om-api-client features -l 50 -v Discharge -o /tmp/whos_features.geojson -f geojs
 om-api-client features -l 50 -F country=ARG -o /tmp/whos_features.json
 # with provider filter (-F provider=)
 om-api-client features -l 50 -F provider=argentina-ina -o /tmp/whos_features.json
+```
+#### batch download
+```text
+$ om-api-client batch --help
+Usage: om-api-client batch [OPTIONS] BEGIN_POSITION END_POSITION
+                           TIMESERIES_IDENTIFIERS OUTPUT
+
+  Retrieve timeseries data sequentially for all identifiers found in provided
+  csv file
+
+  BEGIN_POSITION: Begin date YYYY-MM-DD
+
+  END_POSITION: End date YYYY-MM-DD
+
+  TIMESERIES_IDENTIFIERS: csv file containing timeseries identifiers
+
+  OUTPUT: Save results into this directory
+
+Options:
+  -t, --token TEXT      WHOS access token
+  -u, --url TEXT        WHOS OM OGC timeseries API url
+  -c, --csv             Use CSV format for output (instead of JSON)
+  -i, --id_column TEXT  Column of timeseries_identifiers containing the ids
+  -d, --debug           Log debug messages
+  -r, --recursive       Get data recursively until endPosition is reached. The
+                        API has a is a limit of 5000 records per request
+  --help                Show this message and exit.
+```
+examples
+```bash
+om-api-client batch 1990-01-01 2025-07-15 data/timeseries_identifiers.csv data/downloads -r
 ```
 ### Credits
 

@@ -83,8 +83,16 @@ for f in os.listdir(args.input_directory):
         LTA = groupBy[(groupBy['year'] >= stdStart) & (groupBy['year'] <= stdEnd)].groupby(['month'])['mean_flow'].mean()
 
         #divide each month by this long term average
+        skip_file = False
         for i in range(1,13):
+            if i not in LTA.index:
+                print("ERROR: Month %i missing in Long Term Average for file %s. Skipping file" % (i,f))
+                skip_file = True
+                break
             groupBy.loc[groupBy['month'] == i,'percentile_flow'] = groupBy['mean_flow'][groupBy['month'] == i]/LTA[i] * 100
+
+        if skip_file:
+            continue
 
         """ STEP 3: CALCULATE RANK PERCENTILES """
         # na values automatically set as rank na

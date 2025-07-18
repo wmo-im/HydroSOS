@@ -1,10 +1,10 @@
 import requests
 from typing import List, Callable, Literal, Union, Any, Sequence
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import click
 import json
-from pandas import DataFrame
+from pandas import DataFrame, read_csv, to_datetime
 import sys
 import argparse
 import os
@@ -96,6 +96,10 @@ class OmApiClientConfig(TypedDict):
     threshold_begin_date : Union[str, None]
     page_size : int
 
+class OMResultPoint(TypedDict):
+    date : str
+    value : float
+
 class OmApiClient:
 
     url : str
@@ -111,6 +115,10 @@ class OmApiClient:
     threshold_begin_date : str
 
     page_size : int
+
+    last_url : str
+
+    last_params : dict
 
     default_config : OmApiClientConfig = {
         "url": 'https://gs-service-preproduction.geodab.eu/gs-service/services/essi', # 'https://whos.geodab.eu/gs-service/services/essi',
@@ -316,6 +324,7 @@ class OmApiClient:
         limit = limit if limit is not None else self.page_size
         url = "%s/token/%s/view/%s/%s" % (self.url, self.token, view, profiler_path)
         logging.debug("url: %s" % url)
+        self.last_url = url
         params : dict[str, Any] 
         if profiler == "timeseries-api":
             params = {
@@ -352,6 +361,7 @@ class OmApiClient:
                 "resumptionToken": resumptionToken,
                 "format": format
             } 
+        self.last_params = params
         response = requests.get(
             url,
             params)
@@ -374,6 +384,65 @@ class OmApiClient:
             return [x for x in members if "phenomenonTime" in x and datetime.fromisoformat(x["phenomenonTime"]["end"]) >=  datetime.fromisoformat(threshold_begin_date)]
         else:
             return [x for x in members if "phenomenonTime" in x]
+        
+    def getDataBatch(
+        self,
+        beginPosition : str,
+        endPosition : str,
+        observationIdentifiers : Union[DataFrame, str],
+        output_directory : str,
+        id_column : str = "ObservationId",
+        format : str = "json",
+        recursive : bool = False,
+        **kwargs
+        ):
+        retrieve_method = self.getDataRecursively if recursive else self.getData
+        if not os.path.isdir(output_directory):
+            raise ValueError("%s is not a directory" % output_directory)
+        if type(observationIdentifiers) == str:
+            if not os.path.exists(observationIdentifiers):
+                raise ValueError("observationIdentifiers file not found")
+            observationIdentifiers = read_csv(open(observationIdentifiers,"r", encoding="utf-8"))
+        if id_column not in observationIdentifiers:
+            raise ValueError("Column %s missing in observationIdentifiers data frame" % id_column)
+        for observationIdentifier in observationIdentifiers[id_column]:
+            data = retrieve_method(
+                beginPosition=beginPosition,
+                endPosition=endPosition,
+                observationIdentifier=observationIdentifier,
+                **kwargs
+            )
+            if format.lower() == "csv":
+                df = DataFrame(data)
+                output = os.path.join(output_directory, "%s.csv" % observationIdentifier)
+                df.to_csv(open(output, "w"), index=False)
+            else:
+                output = os.path.join(output_directory, "%s.json" % observationIdentifier)
+                json.dump(data, open(output, "w"), ensure_ascii=False)
+
+    def getDataRecursively(
+        self,
+        beginPosition : str,
+        endPosition : str,
+        **kwargs
+    ) -> List[OMResultPoint]:
+        # parse beginPosition endPosition
+        begin_datetime = to_datetime(beginPosition, utc=True)
+        end_datetime = to_datetime(endPosition, utc=True)
+        results : List[OMResultPoint] = []
+        while begin_datetime < end_datetime:
+            try:
+                data = self.getData(beginPosition=begin_datetime.isoformat(),endPosition=endPosition, **kwargs)
+            except ValueError as e:
+                logging.error("Data retrieval failed. url: %s, params: %s" % (self.last_url, json.dumps(self.last_params)))
+                break
+            if not len(data):
+                break
+            results.extend(data)
+            # find last date
+            df = DataFrame(data)
+            begin_datetime = to_datetime(df["date"], utc=True).max() + timedelta(seconds=1)
+        return results
 
     def getData(
         self,
@@ -388,7 +457,7 @@ class OmApiClient:
         aggregationDuration : Union[str,None] = None, # ISO8601 i.e. P1D
         ontology : Union[str,None] = None,
         profiler : str = "om-api"
-    ) -> List[dict]:        
+    ) -> List[OMResultPoint]:        
         if observationIdentifier is None:
             if feature is None:
                 raise TypeError("feature can't be None if timeseriesIdentifier is None")
@@ -577,7 +646,7 @@ def parse_first_arg():
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["data", "metadata", "features","init"],
+        choices=["data", "batch", "metadata", "features","init"],
         default="data",
         help="Command to run. Default is 'data'."
     )
@@ -588,6 +657,36 @@ def parse_first_arg():
 def cli():
     pass
 
+@cli.command(help="Retrieve timeseries data sequentially for all identifiers found in provided csv file\n\nBEGIN_POSITION: Begin date YYYY-MM-DD\n\nEND_POSITION: End date YYYY-MM-DD\n\nTIMESERIES_IDENTIFIERS: csv file containing timeseries identifiers\n\nOUTPUT: Save results into this directory")
+@click.option('-t','--token', default=None, type=str, help='WHOS access token')
+@click.option('-u','--url', default=None, type=str, help='WHOS OM OGC timeseries API url')
+@click.option('-c','--csv', is_flag=True, default=False, help='Use CSV format for output (instead of JSON)')
+@click.option('-i','--id_column', default="ObservationId", type=str, help='Column of timeseries_identifiers containing the ids')
+@click.option('-d','--debug', is_flag=True, help='Log debug messages')
+@click.option('-r','--recursive', is_flag=True, help='Get data recursively until endPosition is reached. The API has a is a limit of 5000 records per request')
+@click.argument("begin_position", type=str)
+@click.argument("end_position", type=str)
+@click.argument("timeseries_identifiers", type=str)
+@click.argument("output", type=str)
+def batch(token, url, csv, id_column, begin_position, end_position,  timeseries_identifiers, output, debug, recursive):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+    config = {}
+    if token is not None:
+        config["token"] = token
+    if url is not None:
+        config["token"] = token
+    client = OmApiClient(config)
+    client.getDataBatch(
+        beginPosition=begin_position,
+        endPosition=end_position,
+        observationIdentifiers=timeseries_identifiers,
+        output_directory=output,
+        id_column=id_column,
+        format= "csv" if csv else "json",
+        recursive = recursive
+    )
+    
 @cli.command()
 @click.option('-t','--token', default=None, type=str, help='WHOS access token')
 @click.option('-u','--url', default=None, type=str, help='WHOS OM OGC timeseries API url')
@@ -597,16 +696,21 @@ def cli():
 @click.option("-v","--variable_name",default=None,type=str,help="variable identifier. It must be used together with --monitoring_point")
 @click.option("-s","--timeseries_identifier",default=None,type=str,help="timeseries identifier. If set, --monitoring_point and --variable_name are ignored")
 @click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D)")
+@click.option('-d','--debug', is_flag=True, help='Log debug messages')
+@click.option('-r','--recursive', is_flag=True, help='Get data recursively until endPosition is reached. The API has a is a limit of 5000 records per request')
 @click.argument("begin_position")
 @click.argument("end_position")
-def data(token, url, output, csv, monitoring_point, variable_name, timeseries_identifier, aggregation_duration, begin_position, end_position):
+def data(token, url, output, csv, monitoring_point, variable_name, timeseries_identifier, aggregation_duration, begin_position, end_position, debug, recursive):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
     config = {}
     if token is not None:
         config["token"] = token
     if url is not None:
         config["token"] = token
     client = OmApiClient(config)
-    data = client.getData(
+    retrieve_method = client.getDataRecursively if recursive else client.getData
+    data = retrieve_method(
         begin_position, 
         end_position,
         feature = monitoring_point, 
@@ -649,7 +753,10 @@ def data(token, url, output, csv, monitoring_point, variable_name, timeseries_id
 @click.option("-F","--filter", type=observation_filter_value_type, multiple=True, help="Set additional filters as key=value. Valid keys: %s" % ", ".join(OBSERVATION_VALID_FILTERS.keys()))
 @click.option("-1", "--first_page_only",is_flag=True,help="Retrieve only first page.")
 @click.option("-r", "--resumption_token", type=str, default=None, help="Retrieve next page using the provided resumption token")
-def metadata(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, has_data, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token):
+@click.option('-d','--debug', is_flag=True, help='Log debug messages')
+def metadata(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, has_data, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token, debug):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
     config = {}
     if token is not None:
         config["token"] = token
@@ -710,7 +817,10 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
 @click.option("-f","--format",default="json",type=str,help="Response format (e.g. JSON (raw), GeoJSON or CSV)")
 @click.option("-1", "--first_page_only", is_flag=True, help="Retrieve only first page.")
 @click.option("-r", "--resumption_token", type=str, default=None, help="Retrieve next page using the provided resumption token")
-def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token):
+@click.option('-d','--debug', is_flag=True, help='Log debug messages')
+def features(token, url, output, monitoring_point, variable_name, timeseries_identifier, limit, west, south, east, north, ontology, view, time_interpolation, intended_observation_spacing, aggregation_duration, filter, format, first_page_only, resumption_token, debug):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
     config = {}
     if token is not None:
         config["token"] = token
