@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 import click
 import json
-from pandas import DataFrame, read_csv, to_datetime
+from pandas import DataFrame, read_csv, to_datetime, concat
 import sys
 import argparse
 import os
@@ -390,21 +390,33 @@ class OmApiClient:
         beginPosition : str,
         endPosition : str,
         observationIdentifiers : Union[DataFrame, str],
-        output_directory : str,
+        output_directory : str = None,
         id_column : str = "ObservationId",
         format : str = "json",
         recursive : bool = False,
         **kwargs
-        ):
+        ) -> Union[DataFrame, None]:
+        """Retrieves data for each of the provided observation identifiers. If output_directory is not set, returns DataFrame with the columns "date", "value" and "observationId"
+        
+        Args:
+            beginPosition (str): Begin of time period
+            endPosition (str): End of time period
+            observationIdentifiers (Union[DataFrame, str]): DataFrame where one column has the identifiers. If str, path to .csv file
+            output_directory (str, optional): If set, path where to save each timeseries as a separate file
+            id_column (str, default="ObservationId"): Name of the column of observationIdentifiers that contains the observation identifiers
+            format (str, default="json"): Desired output format: options: json (default), csv (works with output_directory)
+            recursive (bool, default=False): If True, download data recursively until endPosition is reached
+            **kwargs: Additional keyword arguments to pass to the retrieve method
+        """
+
         retrieve_method = self.getDataRecursively if recursive else self.getData
-        if not os.path.isdir(output_directory):
-            raise ValueError("%s is not a directory" % output_directory)
         if type(observationIdentifiers) == str:
             if not os.path.exists(observationIdentifiers):
                 raise ValueError("observationIdentifiers file not found")
             observationIdentifiers = read_csv(open(observationIdentifiers,"r", encoding="utf-8"))
         if id_column not in observationIdentifiers:
             raise ValueError("Column %s missing in observationIdentifiers data frame" % id_column)
+        df_list : List[DataFrame] = []
         for observationIdentifier in observationIdentifiers[id_column]:
             data = retrieve_method(
                 beginPosition=beginPosition,
@@ -412,13 +424,22 @@ class OmApiClient:
                 observationIdentifier=observationIdentifier,
                 **kwargs
             )
-            if format.lower() == "csv":
-                df = DataFrame(data)
-                output = os.path.join(output_directory, "%s.csv" % observationIdentifier)
-                df.to_csv(open(output, "w"), index=False)
+            if output_directory is not None:
+                if not os.path.isdir(output_directory):
+                    raise ValueError("%s is not a directory" % output_directory)
+                if format.lower() == "csv":
+                    df = DataFrame(data)
+                    output = os.path.join(output_directory, "%s.csv" % observationIdentifier)
+                    df.to_csv(open(output, "w"), index=False)
+                else:
+                    output = os.path.join(output_directory, "%s.json" % observationIdentifier)
+                    json.dump(data, open(output, "w"), ensure_ascii=False)
             else:
-                output = os.path.join(output_directory, "%s.json" % observationIdentifier)
-                json.dump(data, open(output, "w"), ensure_ascii=False)
+                df = DataFrame(data)
+                df["ObservationId"] = observationIdentifier
+                df_list.append(df)
+        if output_directory is None:
+            return concat(df_list)
 
     def getDataRecursively(
         self,

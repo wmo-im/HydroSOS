@@ -2,6 +2,10 @@
 ## Objective
 To Pilot the generation of HydroSOS discharge status product using observations data published in the WHOS DAB for the La Plata Basin (whos-plata view).
 ## Procedure
+### 0. Install OM API Client application
+```bash
+pip install om-api-client
+```
 ### 1. Discover timeseries observations
 Search for discharge timeseries observations suitable for the status product
 - Expore WHOS metadata using any of the available client tools, i.e.:
