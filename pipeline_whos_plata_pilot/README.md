@@ -43,3 +43,9 @@ python ../whos_client/regularize.py data/raw data/regularized
 ```bash
 python ../status/statuscalc.py data/regularized/ data/status/
 ```
+## Alternative procedure (retrieve features)
+Retrieve features (monitoring points) where daily discharge is available for a given period
+```bash
+om-api-client features -f csv -o data/features.csv -a P1D -v discharge -O whos -F beginPosition=2025-01-01 -F endPosition=2025-07-22 -F provider=argentina-ina
+```
+TO DO: for each feature in data/features.csv, retrieve daily discharge data, regularize and calculate status ([go to issue](https://github.com/wmo-im/HydroSOS/issues/4))
