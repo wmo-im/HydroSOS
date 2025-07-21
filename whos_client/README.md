@@ -146,7 +146,7 @@ read observation identifiers from csv, retrieve data and plot together
 
 ```python
 from io import StringIO
-csv_data = """stream,station_name,station_id,variable,observation_identifier
+csv_data = """stream,station_name,station_id,variable,ObservationId
 URUGUAY,Paso de los Libres,72,monthly discharge,8272678FE72DB91CD511E653099DB3219DEE615B
 URUGUAY,Santo Tomé,68,monthly discharge,18A95E501B2C4EEC191BE2215D87DDF107AF8A42
 URUGUAY,San Javier,65,monthly discharge,9DB2FD5D21BE8FFDF36B699E3CC607CD98FFFB03
@@ -155,17 +155,14 @@ PARANA,Santa Fe,30,monthly discharge,97A1C9210A637D94FB29B5BACB0500E0F353AB04
 PARANA,Barranqueras,20,monthly discharge,24F40961A057CE7DC723EE86BBA3B39729F03CBC
 """
 stations = pandas.read_csv(StringIO(csv_data))
-df_list = []
-for index, row in stations.iterrows():
-    data = client.getData(
+df_batch = client.getDataBatch(
         begin_date,
-        end_date, 
-        observationIdentifier = row["observation_identifier"])
-    df_ = pandas.DataFrame(data)
-    df_["station_name"] = row["station_name"]
-    df_list.append(df_)
-df = pandas.concat(df_list)
-px.line(df, x = "date", y = "value", color = "station_name")
+        end_date,
+        observationIdentifiers = stations,
+        recursive = False
+)
+
+px.line(df_batch, x = "date", y = "value", color = "ObservationId")
 ```
 ![plot many timeseries](https://raw.githubusercontent.com/wmo-im/HydroSOS/refs/heads/main/whos_client/img/plot_many_ts.png)
 
