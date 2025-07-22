@@ -389,54 +389,75 @@ class OmApiClient:
         self,
         beginPosition : str,
         endPosition : str,
-        observationIdentifiers : Union[DataFrame, str],
+        observationIdentifiers : Union[DataFrame, str] = None,
         output_directory : str = None,
         id_column : str = "ObservationId",
         format : str = "json",
         recursive : bool = False,
+        featureIdentifiers : Union[DataFrame, str] = None,
         **kwargs
         ) -> Union[DataFrame, None]:
-        """Retrieves data for each of the provided observation identifiers. If output_directory is not set, returns DataFrame with the columns "date", "value" and "observationId"
+        """Retrieves data for each of the provided observation or feature identifiers. If output_directory is not set, returns DataFrame with the columns "date", "value" and "observationId"
         
         Args:
             beginPosition (str): Begin of time period
             endPosition (str): End of time period
-            observationIdentifiers (Union[DataFrame, str]): DataFrame where one column has the identifiers. If str, path to .csv file
+            observationIdentifiers (Union[DataFrame, str], optional): DataFrame where one column has the identifiers. If str, path to .csv file. If not set, featureIdentifiers must be set
             output_directory (str, optional): If set, path where to save each timeseries as a separate file
             id_column (str, default="ObservationId"): Name of the column of observationIdentifiers that contains the observation identifiers
             format (str, default="json"): Desired output format: options: json (default), csv (works with output_directory)
-            recursive (bool, default=False): If True, download data recursively until endPosition is reached
+            recursive (bool, default=False): If True, download data recursively until endPosition is reached,
+            featureIdentifiers (Union[DataFrame, str], optional): DataFrame where one column has the identifiers. If str, path to .csv file. If not set, observationIdentifiers must be set
             **kwargs: Additional keyword arguments to pass to the retrieve method
         """
 
         retrieve_method = self.getDataRecursively if recursive else self.getData
-        if type(observationIdentifiers) == str:
-            if not os.path.exists(observationIdentifiers):
-                raise ValueError("observationIdentifiers file not found")
-            observationIdentifiers = read_csv(open(observationIdentifiers,"r", encoding="utf-8"))
-        if id_column not in observationIdentifiers:
-            raise ValueError("Column %s missing in observationIdentifiers data frame" % id_column)
+        identifiers : DataFrame
+        use_feature_id = False
+        if observationIdentifiers is not None:
+            if type(observationIdentifiers) == str:
+                if not os.path.exists(observationIdentifiers):
+                    raise ValueError("observationIdentifiers file not found")
+                identifiers = read_csv(open(observationIdentifiers,"r", encoding="utf-8"))
+        elif featureIdentifiers is not None:
+            use_feature_id = True
+            if type(featureIdentifiers) == str:
+                if not os.path.exists(featureIdentifiers):
+                    raise ValueError("featureIdentifiers file not found")
+                identifiers = read_csv(open(featureIdentifiers,"r", encoding="utf-8"))
+        else:
+            raise ValueError("Either observationIdentifiers or featureIdentifiers must be set")
+        if id_column not in identifiers:
+            raise ValueError("Column %s missing in %s data frame" % ("featureIdentifiers" if use_feature_id else "observationIdentifiers",id_column))
         df_list : List[DataFrame] = []
-        for observationIdentifier in observationIdentifiers[id_column]:
-            data = retrieve_method(
-                beginPosition=beginPosition,
-                endPosition=endPosition,
-                observationIdentifier=observationIdentifier,
+        for identifier in identifiers[id_column]:
+            args = {
                 **kwargs
+            }
+            if use_feature_id:
+                args["feature"] = identifier
+                id_column_name = "feature"
+            else:
+                args["observationIdentifier"] = identifier
+                id_column_name = "ObservationId"
+            data = retrieve_method(
+                beginPosition = beginPosition,
+                endPosition = endPosition,
+                **args
             )
             if output_directory is not None:
                 if not os.path.isdir(output_directory):
                     raise ValueError("%s is not a directory" % output_directory)
                 if format.lower() == "csv":
                     df = DataFrame(data)
-                    output = os.path.join(output_directory, "%s.csv" % observationIdentifier)
+                    output = os.path.join(output_directory, "%s.csv" % identifier)
                     df.to_csv(open(output, "w"), index=False)
                 else:
-                    output = os.path.join(output_directory, "%s.json" % observationIdentifier)
+                    output = os.path.join(output_directory, "%s.json" % identifier)
                     json.dump(data, open(output, "w"), ensure_ascii=False)
             else:
                 df = DataFrame(data)
-                df["ObservationId"] = observationIdentifier
+                df[id_column_name] = identifier
                 df_list.append(df)
         if output_directory is None:
             return concat(df_list)
@@ -496,7 +517,8 @@ class OmApiClient:
                 intendedObservationSpacing = intendedObservationSpacing,
                 aggregationDuration = aggregationDuration,
                 ontology = ontology,
-                profiler = profiler
+                profiler = profiler,
+                limit = 1
             )
             if not len(ts_metadata["member"]):
                 raise FileNotFoundError("Observations not found for  monitoringPoint: %s, observedProperty: %s" % (feature, observedProperty))
@@ -678,18 +700,24 @@ def parse_first_arg():
 def cli():
     pass
 
-@cli.command(help="Retrieve timeseries data sequentially for all identifiers found in provided csv file\n\nBEGIN_POSITION: Begin date YYYY-MM-DD\n\nEND_POSITION: End date YYYY-MM-DD\n\nTIMESERIES_IDENTIFIERS: csv file containing timeseries identifiers\n\nOUTPUT: Save results into this directory")
+@cli.command(help="Retrieve timeseries data sequentially for all identifiers found in provided csv file\n\nBEGIN_POSITION: Begin date YYYY-MM-DD\n\nEND_POSITION: End date YYYY-MM-DD\n\nIDENTIFIERS: csv file containing timeseries identifiers (or feature identifiers if -f option is set)\n\nOUTPUT: Save results into this directory")
 @click.option('-t','--token', default=None, type=str, help='WHOS access token')
 @click.option('-u','--url', default=None, type=str, help='WHOS OM OGC timeseries API url')
 @click.option('-c','--csv', is_flag=True, default=False, help='Use CSV format for output (instead of JSON)')
-@click.option('-i','--id_column', default="ObservationId", type=str, help='Column of timeseries_identifiers containing the ids')
+@click.option('-I','--id_column', default="ObservationId", type=str, help='Column of timeseries_identifiers containing the ids')
 @click.option('-d','--debug', is_flag=True, help='Log debug messages')
 @click.option('-r','--recursive', is_flag=True, help='Get data recursively until endPosition is reached. The API has a is a limit of 5000 records per request')
+@click.option('-f','--use_feature_id', is_flag=True, help='Retrieve data using feature ids instead of timeseries observation ids. Only first observation match for each feature will be retrieved.')
+@click.option("-v","--variable_name",default=None,type=str,help="variable identifier. Effective only when used together with -f, --use_feature_id")
+@click.option("-a","--aggregation_duration",default=None,type=str,help="Time aggregation that has occurred to the value in the timeseries, expressed as ISO8601 duration (e.g., P1D). Effective only when used together with -f, --use_feature_id")
+@click.option("-O","--ontology",default=None,type=str,help="The ontology to be used to expand the observed property search term (or URI) with additional terms from the ontology that are synonyms and associated to narrower concepts. Two ontologies are available: whos or his-central. Effective only when used together with -f, --use_feature_id")
+@click.option("-T","--time_interpolation",default=None,type=str,help="The interpolation used on the time axis (for example, MAX, MIN, TOTAL, AVERAGE, MAX_PREC, MAX_SUCC, CONTINUOUS, ...). Effective only when used together with -f, --use_feature_id")
+@click.option("-i","--intended_observation_spacing",default=None,type=str,help="The expected duration between individual observations, expressed as ISO8601 duration (e.g., P1D). Effective only when used together with -f, --use_feature_id")
 @click.argument("begin_position", type=str)
 @click.argument("end_position", type=str)
-@click.argument("timeseries_identifiers", type=str)
+@click.argument("identifiers", type=str)
 @click.argument("output", type=str)
-def batch(token, url, csv, id_column, begin_position, end_position,  timeseries_identifiers, output, debug, recursive):
+def batch(token, url, csv, id_column, begin_position, end_position,  identifiers, output, debug, recursive, use_feature_id, variable_name, aggregation_duration, ontology, time_interpolation, intended_observation_spacing):
     if debug:
         logging.basicConfig(level=logging.DEBUG)
     config = {}
@@ -698,14 +726,25 @@ def batch(token, url, csv, id_column, begin_position, end_position,  timeseries_
     if url is not None:
         config["token"] = token
     client = OmApiClient(config)
+    args = {
+        "output_directory": output,
+        "id_column": id_column,
+        "format": "csv" if csv else "json",
+        "recursive": recursive,
+        "observedProperty": variable_name, 
+        "aggregationDuration": aggregation_duration,
+        "ontology": ontology, 
+        "timeInterpolation": time_interpolation, 
+        "intendedObservationSpacing": intended_observation_spacing
+    }
+    if use_feature_id:
+        args["featureIdentifiers"] = identifiers
+    else:
+        args["observationIdentifiers"] = identifiers
     client.getDataBatch(
         beginPosition=begin_position,
-        endPosition=end_position,
-        observationIdentifiers=timeseries_identifiers,
-        output_directory=output,
-        id_column=id_column,
-        format= "csv" if csv else "json",
-        recursive = recursive
+        endPosition=end_position,        
+        **args
     )
     
 @cli.command()
