@@ -236,7 +236,7 @@ class OmApiClient:
         is_last = False
         resumption_token = None
         while not is_last:
-            kwargs_ = {"resumptionToken": resumption_token, **kwargs}
+            kwargs_ = {**kwargs, "resumptionToken": resumption_token}
             result = method(**kwargs_)
             if result_list_property not in result:
                 is_last = True
