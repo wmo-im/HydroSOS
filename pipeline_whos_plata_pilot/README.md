@@ -97,3 +97,15 @@ om-api-client features -f csv -o data/features.csv -a P1D -v discharge -O whos -
 om-api-client batch 1990-01-01 2025-07-22 data/features.csv data/raw -I id -c -a P1D -v discharge -O whos -r -f
 ```
 ### 3. & 4. regularize and calculate status as in procedure A
+## Example with provider DINAGUA
+```bash
+# 1. get features where recent daily average discharge is available
+om-api-client features -F provider=uruguay-dinagua -v discharge -O whos -a P1D -T AVERAGE -f csv -o data/features_dinagua_daily_discharge_avg.csv -F beginPosition=2025-06-01 -F endPosition=202
+5-07-23
+# 2. For each feature retrieve daily average discharge data (short time span for test purposes, retrieval may be slow)
+om-api-client batch 2024-06-01 2025-07-23 data/features_dinagua_daily_discharge_avg.csv data/raw/dinagua -v discharge -O whos -a P1D -T AVERAGE -I id -f -c
+# 3. regularize
+python ../whos_client/regularize.py data/raw/dinagua data/regularized/dinagua
+# 4. statuscalc will produce no output because of missing long term average. Set a longer time span in step 2 for this to work.
+python ../status/statuscalc.py data/regularized/dinagua/ data/status/dinagua/
+```

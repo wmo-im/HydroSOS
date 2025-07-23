@@ -11,7 +11,11 @@ def regularizeDir(input_dir : str, output_dir : str):
 
 def regularize(input : str, output : str):
     # read om-api-client data .csv (cols: date (iso format),value (float))
-    flowdata = pandas.read_csv(input)
+    try:
+        flowdata = pandas.read_csv(input)
+    except pandas.errors.EmptyDataError as e:
+        print("No data found in file: %s. Skippping" % input)
+        return
     # set column names: date,flow
     flowdata.columns = ['date','flow']
     flowdata['date'] = pandas.to_datetime(flowdata['date'], format="ISO8601")

@@ -1,0 +1,6 @@
+data
+!data/features.csv
+!data/timeseries_identifiers.csv
+!data/raw/C5CC107C5DC9E2DDB75025AB8C9B7C05FB51B098.csv
+!data/regularized/C5CC107C5DC9E2DDB75025AB8C9B7C05FB51B098.csv
+!data/status/cat_C5CC107C5DC9E2DDB75025AB8C9B7C05FB51B098.csv
