@@ -10,7 +10,7 @@ Python ForecastCalc.py obs_dir forecast_dir output_dir
 Where obs_dir and forecast_dir are directories containing csv files with observed simulated and forecast data in them. See the example_data for how these files should be formatted. 
 
 
-V1 Gemma Nash/Ezra Kitson UKCEH 24072024
+V1 Gemma Nash/Ezra Kitson UKCEH 24075024
 """
 
 ##############################################
@@ -106,12 +106,12 @@ def createStatusBands(df):
     bands['mean'] = pivotedMeans.mean(axis=1)
     bands['max'] = pivotedMeans.max(axis=1)
     bands['month'] = bands.index
-    empirical_quantiles = mquantiles(pivotedMeans, prob=[.05,.13,.28,.72,.87,.95], alphap=.4, betap=.4, axis=1)
+    empirical_quantiles = mquantiles(pivotedMeans, prob=[.05,.10,.25,.75,.90,.95], alphap=.4, betap=.4, axis=1)
     bands['5%'] = empirical_quantiles[:,0]
-    bands['13%'] = empirical_quantiles[:,1]
-    bands['28%'] = empirical_quantiles[:,2]
-    bands['72%'] = empirical_quantiles[:,3]
-    bands['87%'] = empirical_quantiles[:,4]
+    bands['10%'] = empirical_quantiles[:,1]
+    bands['25%'] = empirical_quantiles[:,2]
+    bands['75%'] = empirical_quantiles[:,3]
+    bands['90%'] = empirical_quantiles[:,4]
     bands['95%'] = empirical_quantiles[:,5]
     return bands
 
@@ -146,12 +146,12 @@ def createAccumulatedForecastBands(df):
     bands['mean'] = accumulatedMean.mean(axis=1)
     bands['max'] = accumulatedMean.max(axis=1)
     #compute empirical quantiles 
-    empirical_quantiles = mquantiles(accumulatedMean, prob=[.05,.13,.28,.72,.87,.95], alphap=.4, betap=.4, axis=1)
+    empirical_quantiles = mquantiles(accumulatedMean, prob=[.05,.10,.25,.75,.90,.95], alphap=.4, betap=.4, axis=1)
     bands['5%'] = empirical_quantiles[:,0]
-    bands['13%'] = empirical_quantiles[:,1]
-    bands['28%'] = empirical_quantiles[:,2]
-    bands['72%'] = empirical_quantiles[:,3]
-    bands['87%'] = empirical_quantiles[:,4]
+    bands['10%'] = empirical_quantiles[:,1]
+    bands['25%'] = empirical_quantiles[:,2]
+    bands['75%'] = empirical_quantiles[:,3]
+    bands['90%'] = empirical_quantiles[:,4]
     bands['95%'] = empirical_quantiles[:,5]
     bands['relative_month']=bands.index+1
     return bands
@@ -172,12 +172,12 @@ def createSingleForecastBands(df):
     bands['mean'] = reshapedDF.mean(axis=1)
     bands['max'] = reshapedDF.max(axis=1)
     #compute empirical quantiles 
-    empirical_quantiles = mquantiles(reshapedDF, prob=[.05,.13,.28,.72,.87,.95], alphap=.4, betap=.4, axis=1)
+    empirical_quantiles = mquantiles(reshapedDF, prob=[.05,.10,.25,.75,.90,.95], alphap=.4, betap=.4, axis=1)
     bands['5%'] = empirical_quantiles[:,0]
-    bands['13%'] = empirical_quantiles[:,1]
-    bands['28%'] = empirical_quantiles[:,2]
-    bands['72%'] = empirical_quantiles[:,3]
-    bands['87%'] = empirical_quantiles[:,4]
+    bands['10%'] = empirical_quantiles[:,1]
+    bands['25%'] = empirical_quantiles[:,2]
+    bands['75%'] = empirical_quantiles[:,3]
+    bands['90%'] = empirical_quantiles[:,4]
     bands['95%'] = empirical_quantiles[:,5]
     bands['relative_month']=bands.index+1
     return bands
@@ -191,12 +191,12 @@ def getForecastPercentiles(forecasts):
     arrMin = arr.min(axis=1)
     arrMean = arr.mean(axis=1)
     arrMax = arr.max(axis=1)
-    empirical_quantiles = mquantiles(arr, prob=[.13,.28,.72,.87], alphap=.4, betap=.4, axis=1)
-    percentile13 = empirical_quantiles[:,0]
-    percentile28 = empirical_quantiles[:,1]
-    percentile72 = empirical_quantiles[:,2]
-    percentile87 = empirical_quantiles[:,3]
-    percentiles = pd.DataFrame({'date':forecasts['date'],'min':arrMin,'mean':arrMean,'max':arrMax,'13%':percentile13,'28%':percentile28,'72%':percentile72,'87%':percentile87})
+    empirical_quantiles = mquantiles(arr, prob=[.10,.25,.75,.90], alphap=.4, betap=.4, axis=1)
+    percentile10 = empirical_quantiles[:,0]
+    percentile25 = empirical_quantiles[:,1]
+    percentile75 = empirical_quantiles[:,2]
+    percentile90 = empirical_quantiles[:,3]
+    percentiles = pd.DataFrame({'date':forecasts['date'],'min':arrMin,'mean':arrMean,'max':arrMax,'10%':percentile10,'25%':percentile25,'75%':percentile75,'90%':percentile90})
     return percentiles
 
 #count up how many of the ENS columns for a month fit into each of the forecast bands for the counts graphs
@@ -311,17 +311,17 @@ for id in catchmentIDs:
             statusBands.to_csv(output_directory+'/status/statusBands/'+ cid +'_bands.csv', index=False, float_format='%.4f')
             #write accumulated forecasts
             accumulatedForecastBands = createAccumulatedForecastBands(statusDF) #GOOD
-            accumulatedForecastBands.to_csv(output_directory +'/accumulated/forecastBands/'+ cid +'_bands.csv', index=False, float_format='%.4f', columns =['relative_month', 'min', 'mean', 'max', '13%', '28%', '72%', '87%'])
+            accumulatedForecastBands.to_csv(output_directory +'/accumulated/forecastBands/'+ cid +'_bands.csv', index=False, float_format='%.4f', columns =['relative_month', 'min', 'mean', 'max', '10%', '25%', '75%', '90%'])
             accumulatedForecastPercentiles = getForecastPercentiles(accumulated_forecasts) #GOOD
             accumulatedForecastPercentiles.to_csv(output_directory +'/accumulated/percentiles/'+ cid +'_percentiles.csv', header=True, index = False, float_format='%.4f')
-            accumulatedCounts = getForecastCounts(['13%','28%','72%','87%'], accumulated_forecasts, accumulatedForecastBands)
+            accumulatedCounts = getForecastCounts(['10%','25%','75%','90%'], accumulated_forecasts, accumulatedForecastBands)
             accumulatedCounts.to_csv(output_directory +'/accumulated/counts/'+ cid +'_counts.csv', index=False)
             #write single forecasts
             singleForecastBands = createSingleForecastBands(statusDF)
-            singleForecastBands.to_csv(output_directory +'/single/forecastBands/'+ cid +'_bands.csv', index=False, float_format='%.4f', columns =['relative_month', 'min', 'mean', 'max', '13%', '28%', '72%', '87%'])
+            singleForecastBands.to_csv(output_directory +'/single/forecastBands/'+ cid +'_bands.csv', index=False, float_format='%.4f', columns =['relative_month', 'min', 'mean', 'max', '10%', '25%', '75%', '90%'])
             singleForecastPercentiles = getForecastPercentiles(single_forecasts) #GOOD
             singleForecastPercentiles.to_csv(output_directory +'/single/percentiles/'+ cid +'_percentiles.csv', header=True, index = False, float_format='%.4f')
-            singleCounts = getForecastCounts(['13%','28%','72%','87%'], single_forecasts, singleForecastBands)
+            singleCounts = getForecastCounts(['10%','25%','75%','90%'], single_forecasts, singleForecastBands)
             singleCounts.to_csv(output_directory +'/single/counts/'+ cid +'_counts.csv', index=False)
             
 print("**************************************")

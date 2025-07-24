@@ -22,13 +22,13 @@ parser.add_argument('--endYear', help='end of the year range that will be used t
 args = parser.parse_args()
 
 if args.startYear:
-    stdStart=args.startYear
+    stdStart=int(args.startYear)
 else: 
     print("No start year set, defaulting to 1991.")
     stdStart=1991
 
 if args.endYear:
-    stdEnd=args.endYear
+    stdEnd=int(args.endYear)
 else: 
     print("No end year set, defaulting to 2020.")
     stdEnd=2020
@@ -103,13 +103,13 @@ for f in os.listdir(args.input_directory):
 
         def flow_status(weibell_rank):
             status = pd.NA
-            if weibell_rank <= 0.13:
+            if weibell_rank <= 0.10:
                 status = 1
-            elif weibell_rank <= 0.28:
+            elif weibell_rank <= 0.25:
                 status = 2
-            elif weibell_rank <= 0.71999:
+            elif weibell_rank <= 0.75:
                 status = 3
-            elif weibell_rank <= 0.86999:
+            elif weibell_rank <= 0.9:
                 status = 4
             elif weibell_rank <= 1:
                 status = 5

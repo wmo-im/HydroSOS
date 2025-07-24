@@ -149,8 +149,8 @@ plot(mon_flow$date,mon_flow$rankperc, type="l",xlab="Date",ylab="Rank Percentile
 # NOTE THESE ARE LIKELY TO BE CHANGED TO BE MORE "STANDARD" SOON
 pc_cat<-data.frame(
   category=c("low","below_normal","normal","above_normal","high"),
-  lowerlim=c(0,0.13001,0.28001,0.72,0.87),
-  upperlim=c(0.13,0.28,0.71999,0.86999,1),
+  lowerlim=c(0,0.1001,0.25001,0.75,0.9),
+  upperlim=c(0.1,0.25,0.74999,0.89999,1),
   hexcolour=c("#CD233f","#FFA883","#E7E2BC","#8ECEEE","#2C7DCD")
 )
 
