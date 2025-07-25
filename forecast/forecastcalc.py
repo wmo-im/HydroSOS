@@ -261,8 +261,11 @@ for id in catchmentIDs:
             catchmentID = filenameParts[2]
             # if the catchment id matches the filename
             if catchmentID == id: 
-                # add the ENS to the columns for the export
-                ENS = 'ENS'+filenameParts[1]
+                # add the ENS to the columns for the export, include the letters ENS if they are missing
+                if 'ENS' not in filenameParts[1]:
+                    ENS = 'ENS'+filenameParts[1]
+                else:
+                    ENS = filenameParts[1]
                 columns.append(ENS)
                 # open the forecast file and add it to the fullDF to export.
                 with open(forecast_directory+'/'+filename, mode="r") as fr:
