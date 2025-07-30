@@ -1,5 +1,6 @@
 # import required packages
 import pandas as pd, os, argparse
+from pathlib import Path
 
 parser = argparse.ArgumentParser(
                     prog='Hydro SOS csv_to_json PYTHON',
@@ -30,6 +31,7 @@ allFilesDF.set_index(['date'], inplace=True)
 allFilesDF.rename(columns={"flowcat":"category"}, inplace=True)
 allFilesDF['category'] = allFilesDF['category'].astype('Int64')
 
+Path(args.output_directory).mkdir(parents=True, exist_ok=True)
 for date in allFilesDF.index:
     #this happens if there is only one record
     if type(allFilesDF.loc[date]) == pd.core.series.Series:

@@ -7,6 +7,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import os
+from pathlib import Path
 
 parser = argparse.ArgumentParser(
                     prog='StatusCalc v3 PYTHON',
@@ -39,6 +40,7 @@ assert stdStart < stdEnd, "startYear must be greater than endYear"
 #input_directory="./example_data/input/"
 #output_directory="./example_data/output_Python/"
 
+Path(args.output_directory).mkdir(parents=True, exist_ok=True)
 
 for f in os.listdir(args.input_directory):
 
