@@ -24,7 +24,7 @@ It should be used as follows:
 
 For example: 
 
-``` python status/statuscalc.py ./example_data/status/input/ ./example_data/status/output_Python/ --startYear 1990 --endYear 2020 ```
+``` python status/statuscalc.py ./example_data/status/input/ ./example_data/status/output/output_Python/ --startYear 1990 --endYear 2020 ```
 
 
 Where:
@@ -40,7 +40,7 @@ A Python script that converts the csv outputs of the StatusCalc Python/R script 
 ``` python status_to_json.py input_directory output_directory```
 
 For example: 
-```python status_to_json.py ./example_data/status/output_Python ./example_data/status/output_json```
+```python status/status_to_json.py ./example_data/status/output/output_Python ./example_data/status/output/output_json```
 
 Where:
 *  ```input_directory``` is the directory containing .csv status outputs from the python/R script with the name ```cat_stationID.csv```, this naming convention must be adhered to for the script to work. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/status/output_Python](./example_data/status/output_Python) for how these files should look.
