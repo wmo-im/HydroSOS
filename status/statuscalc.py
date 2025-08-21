@@ -8,17 +8,24 @@ import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_INPUT = str((SCRIPT_DIR / "../example_data/status/input/").resolve()) + os.sep
+DEFAULT_OUTPUT = str((SCRIPT_DIR / "../example_data/status/output/output_Python/").resolve()) + os.sep
 
 parser = argparse.ArgumentParser(
                     prog='StatusCalc v3 PYTHON',
-                    description='Calculates status based on daily timeseries for the HydroSOS portal',
+                    description='Calculates flow status based on daily flow timeseries for the HydroSOS portal',
                     epilog='Katie F-C, Ezra K, UKCEH, 14052024')
 
 
-parser.add_argument('input_directory', help='input directory, should ONLY contain .csv daily timeseries, see GitHub for examples.')        
-parser.add_argument('output_directory', help='directory files will be saved to as cat_{input_file}.csv')     
-parser.add_argument('--startYear', help='start of the year range that will be used to calculate the reference average.')
-parser.add_argument('--endYear', help='end of the year range that will be used to calculate the reference average.')
+parser.add_argument('input_directory', nargs='?', default=DEFAULT_INPUT,
+                    help=f'input directory, should ONLY contain .csv daily flow timeseries, see GitHub for examples. (default: {DEFAULT_INPUT})')
+parser.add_argument('output_directory', nargs='?', default=DEFAULT_OUTPUT,
+                    help=f'directory files will be saved to as cat_input_file.csv (default: {DEFAULT_OUTPUT})')
+parser.add_argument('--startYear', type=int, default=1991,
+                    help='start of the year range that will be used to calculate the reference average. (default: 1991)')
+parser.add_argument('--endYear', type=int, default=2020,
+                    help='end of the year range that will be used to calculate the reference average. (default: 2020)')
 
 args = parser.parse_args()
 
