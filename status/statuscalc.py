@@ -11,11 +11,11 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(
                     prog='StatusCalc v3 PYTHON',
-                    description='Calculates flow status based on daily flow timeseries for the HydroSOS portal',
+                    description='Calculates status based on daily timeseries for the HydroSOS portal',
                     epilog='Katie F-C, Ezra K, UKCEH, 14052024')
 
 
-parser.add_argument('input_directory', help='input directory, should ONLY contain .csv daily flow timeseries, see GitHub for examples.')        
+parser.add_argument('input_directory', help='input directory, should ONLY contain .csv daily timeseries, see GitHub for examples.')        
 parser.add_argument('output_directory', help='directory files will be saved to as cat_{input_file}.csv')     
 parser.add_argument('--startYear', help='start of the year range that will be used to calculate the reference average.')
 parser.add_argument('--endYear', help='end of the year range that will be used to calculate the reference average.')
@@ -118,12 +118,12 @@ for f in os.listdir(args.input_directory):
             return status
 
         for i in groupBy.index:
-            groupBy.loc[i,'flowcat'] = flow_status(groupBy.loc[i,'weibell_rank'])
+            groupBy.loc[i,'category'] = flow_status(groupBy.loc[i,'weibell_rank'])
 
 
         """ STEP 5: WRITE DATA """
         groupBy['date'] = pd.to_datetime(groupBy[['year', 'month']].assign(DAY=1))
         groupBy['date'] = groupBy['date'].dt.strftime('%Y-%m-%d')
-        groupBy['flowcat'] = groupBy['flowcat'].astype('Int64')
-        groupBy.sort_values(['year','month']).filter(['date','flowcat']).to_csv(f"{args.output_directory}cat_{f}", index=False)
+        groupBy['category'] = groupBy['category'].astype('Int64')
+        groupBy.sort_values(['year','month']).filter(['date','category']).to_csv(f"{args.output_directory}cat_{f}", index=False)
         

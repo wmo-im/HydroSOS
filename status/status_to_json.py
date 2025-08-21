@@ -4,11 +4,11 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser(
                     prog='Hydro SOS csv_to_json PYTHON',
-                    description='Convert categorgised station (point data) monthly flow status.csv to a single monthly json file.',
+                    description='Convert categorgised station (point data) monthly status.csv to a single monthly json file.',
                     epilog='Gemma N, Ezra K, UKCEH, 22052024')
 
 
-parser.add_argument('input_directory', help='input directory, should ONLY contain .csv monthly categorised flow status (point data) files, see GitHub for examples.')   
+parser.add_argument('input_directory', help='input directory, should ONLY contain .csv monthly categorised status (point data) files, see GitHub for examples.')   
 parser.add_argument('output_directory', help='directory files will be saved to as {date}.json')     
 
 args = parser.parse_args()
@@ -28,7 +28,6 @@ allFilesDF['date'] = pd.to_datetime(allFilesDF['date'])
 allFilesDF = allFilesDF.sort_values(by='date', ascending=True)
 allFilesDF.drop_duplicates(inplace=True)
 allFilesDF.set_index(['date'], inplace=True)
-allFilesDF.rename(columns={"flowcat":"category"}, inplace=True)
 allFilesDF['category'] = allFilesDF['category'].astype('Int64')
 
 Path(args.output_directory).mkdir(parents=True, exist_ok=True)
