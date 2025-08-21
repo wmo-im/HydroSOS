@@ -32,19 +32,18 @@ print("Parsing arguments.")
 
 parser = argparse.ArgumentParser(
                     prog='ForecastCalc PYTHON',
-                    description='Calculates flow status based on daily flow timeseries for the HydroSOS portal',
+                    description='Calculates forecast based on daily timeseries for the HydroSOS portal',
                     epilog='Gemma N, Ezra K, UKCEH, 25057024')
 
-parser.add_argument('obs_dir', help='directory containing obsserved simulated (obssim) discharge data as timeseries, should ONLY contain .csv daily flow timeseries, filenames should be formatted X_CATCHMENTID.csv see GitHub for examples.')        
-parser.add_argument('forecast_dir', help='directory containing forecast discharge data for the next X months, should only contain .csv monthly flow forecasts, filenames should be formatted X_ENS_CATCHMENTID.csv, see GitHub for examples.')     
+parser.add_argument('obs_dir', help='directory containing obsserved simulated (obssim) data as timeseries, should ONLY contain .csv daily timeseries, filenames should be formatted X_CATCHMENTID.csv see GitHub for examples.')        
+parser.add_argument('forecast_dir', help='directory containing forecast data for the next X months, should only contain .csv monthly forecasts, filenames should be formatted X_ENS_CATCHMENTID.csv, see GitHub for examples.')     
 parser.add_argument('output_dir', help=
                     'directory files will be saved to. Four sub directories will be created in this directory forecastBand, forecasts, counts and percentiles') 
 parser.add_argument('--obsDirStartingMonth', help='Starting month in the obsDir dataset (default january)') 
-
+parser.add_argument('--varName', help='Name of the variable in your data files, default is Discharge') 
 
 
 args = parser.parse_args()
-
 forecast_directory = args.forecast_dir
 status_directory = args.obs_dir
 output_directory = args.output_dir
@@ -83,6 +82,11 @@ else:
     obsSimSlice = forecast_month -1
     print(f"Obs sim slicing starts from row {obsSimSlice}")
 
+#check the variable name to use
+if args.varName:
+    varName=args.varName
+else:
+    varName='Discharge'
 
 ##############################################
 # Functions 
@@ -90,18 +94,18 @@ else:
 
 #get monthly average of obsSim column
 def getStatus(df):
-    monthlyMeans =  df.groupby(['year','month'], as_index=False)['Discharge'].mean()
+    monthlyMeans =  df.groupby(['year','month'], as_index=False)[varName].mean()
     monthlyMeans['month'] = monthlyMeans['month'].apply(lambda x: '{0:0>2}'.format(x))
     monthlyMeans['date'] = monthlyMeans['year'].astype(str) + '-' + monthlyMeans['month'].astype(str)
-    status = monthlyMeans[['date','Discharge']]
+    status = monthlyMeans[['date',varName]]
     return status
 
 
 #get percentiles of monthly obsSim data to make the status climatology categories
 def createStatusBands(df):
     bands = pd.DataFrame()
-    monthlyMeans = df.groupby(['year','month'], as_index=False)['Discharge'].mean()
-    pivotedMeans = monthlyMeans.pivot(index='month', columns='year', values='Discharge')
+    monthlyMeans = df.groupby(['year','month'], as_index=False)[varName].mean()
+    pivotedMeans = monthlyMeans.pivot(index='month', columns='year', values=varName)
     bands['min'] = pivotedMeans.min(axis=1)
     bands['mean'] = pivotedMeans.mean(axis=1)
     bands['max'] = pivotedMeans.max(axis=1)
@@ -128,16 +132,16 @@ def getAccumulatedForecasts(df):
     accumulatedMonthlyMeans.columns = output_columns
     return accumulatedMonthlyMeans
 
-#get percentiles of accumulated monthly Discharge data to make the forecast climatology categories
+#get percentiles of accumulated monthly data to make the forecast climatology categories
 def createAccumulatedForecastBands(df):
     bands = pd.DataFrame()
-    monthlyMeans = df.groupby(['year','month'], as_index=False)['Discharge'].mean()
+    monthlyMeans = df.groupby(['year','month'], as_index=False)[varName].mean()
     reshapedDF = pd.DataFrame()
     start = obsSimSlice
     ticker = obsSimSlice
     for i in range(start,len(monthlyMeans.index)):
         if (i + 1) % 12 == ticker:  # the modulo operation
-            reshapedDF['Obs'+str(start)] = monthlyMeans['Discharge'].iloc[start:i+1].values.reshape(12)
+            reshapedDF['Obs'+str(start)] = monthlyMeans[varName].iloc[start:i+1].values.reshape(12)
             start = i + 1  # set start to next index
     accumulatedMean = pd.DataFrame()
     for column in reshapedDF:
@@ -156,16 +160,16 @@ def createAccumulatedForecastBands(df):
     bands['relative_month']=bands.index+1
     return bands
 
-#get percentiles of single monthly Discharge data to make the forecast climatology categories
+#get percentiles of single monthly data to make the forecast climatology categories
 def createSingleForecastBands(df):
     bands = pd.DataFrame()
-    monthlyMeans = df.groupby(['year','month'], as_index=False)['Discharge'].mean()
+    monthlyMeans = df.groupby(['year','month'], as_index=False)[varName].mean()
     reshapedDF = pd.DataFrame()
     start = obsSimSlice
     ticker = obsSimSlice
     for i in range(start,len(monthlyMeans.index)):
         if (i + 1) % 12 == ticker:  # the modulo operation
-            reshapedDF['Obs'+str(start)] = monthlyMeans['Discharge'].iloc[start:i+1].values.reshape(12)
+            reshapedDF['Obs'+str(start)] = monthlyMeans[varName].iloc[start:i+1].values.reshape(12)
             start = i + 1  # set start to next index
     #row one of reshaped Df witll be the yearly values of forecast month for different years
     bands['min'] = reshapedDF.min(axis=1)
@@ -279,9 +283,8 @@ for id in catchmentIDs:
                     fullDF['date'] = df['date']
                     fullDF['year'] = df['year']
                     fullDF['month'] = df['month']
-                    fullDF[ENS] = df['Discharge'] # add the value for this ensemble member to the full df.
+                    fullDF[ENS] = df[varName] # add the value for this ensemble member to the full df.
    
-                
     #export the full forecast with all the ensemble members
     fullDF.reset_index()
     fullDF['month'] = fullDF['month'].astype(int).apply(lambda x: '{0:0>2}'.format(x))
@@ -309,7 +312,7 @@ for id in catchmentIDs:
                 statusDF['month'] = statusDF['date'].dt.month.astype(int)
             #write the status data
             status = getStatus(statusDF)
-            status.to_csv(output_directory +'/status/status/'+ cid +'_status.csv', header=True, index = False, float_format='%.4f', columns=['date','Discharge'])
+            status.to_csv(output_directory +'/status/status/'+ cid +'_status.csv', header=True, index = False, float_format='%.4f', columns=['date',varName])
             statusBands = createStatusBands(statusDF)
             statusBands.to_csv(output_directory+'/status/statusBands/'+ cid +'_bands.csv', index=False, float_format='%.4f')
             #write accumulated forecasts

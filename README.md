@@ -1,7 +1,7 @@
 # Hydrological Status and Outlook System
 
 Hydrological Status and Outlook System (HydroSOS). This repository contains code to facilitate common categorisation of status and forecast data for integration into the HydroSOS portal.
-Use the flowchart below to identify the scripts appropriate for your data. **Currently this repository only supports **stream flow** data**. 
+Use the flowchart below to identify the scripts appropriate for your data. 
 
 If your data is ***status*** run ```status/statuscalc.py``` followed by ```status/status_to_json.py``` for ***station data*** or ```status/status_to_geotiff.py``` for ***hydrobasin data***.
 
@@ -9,7 +9,7 @@ If your data is ***forecast*** run ```forecast/forecastcalc.py``` followed by ``
 
 ![Code flowchart](flowchart.png)
 
-On the HydroSOS web portal, the monthly flow category .csv files for each station/hydrobasin (produced by statuscalc.py/forecastcalc.py) are displayed in timeseries graphs, whereas the .json/.geotiff files for each month are visualised on the map. 
+On the HydroSOS web portal, the monthly category .csv files for each station/hydrobasin (produced by statuscalc.py/forecastcalc.py) are displayed in timeseries graphs, whereas the .json/.geotiff files for each month are visualised on the map. 
 
 ## Status  
 
@@ -28,10 +28,10 @@ For example:
 
 
 Where:
-*  ```input_directory``` is the directory containing the .csv flow timeseries to be processed. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/status/input](./example_data/status/input) for how these files should look.
+*  ```input_directory``` is the directory containing the .csv timeseries to be processed. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/status/input](./example_data/status/input) for how these files should look.
 * ```output_directory``` is the directory the processed .csv files will be written to. They will have the same name as files in the input_directory but with ```cat_``` appended to the start of the name.
-* ```--startYear``` an optional argument, which year to use as the start range to calculate the reference average flow. Each monthly flow is divided by this reference average before calculating percentile rank and flow status.
-* ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average flow. Each monthly flow is divided by this reference average before calculating percentile rank and flow status. 
+* ```--startYear``` an optional argument, which year to use as the start range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status.
+* ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status. 
 
 ### ```status/status_to_json.py```
 A Python script that converts the csv outputs of the StatusCalc Python/R script to json files for use in the HydroSOS web portal is also provided. It can process multiple files in one go.
@@ -55,16 +55,17 @@ A python script that converts the csv outputs of the statuscalc script into geot
 
 ### ```forecast/forecastcalc.py```
 
-This repository contains Python code to convert monthly flow forecast data into categories. This can be done using the ```forecastcalc.py``` script which should be run as follows: 
+This repository contains Python code to convert monthly forecast data into categories. This can be done using the ```forecastcalc.py``` script which should be run as follows: 
 
-``` python forecastcalc.py obs_dir forecast_dir output_dir --obsDirStartingMonth```
+``` python forecastcalc.py obs_dir forecast_dir output_dir --obsDirStartingMonth --varName```
 
 Where:
 
 * ```obs_dir``` contains ONLY .csv files of historic status (observed simulated) data, as daily time series. Filenames should be formatted X_CATCHMENTID.csv
 * ``forecast_dir`` contains ONLY .csv files of forecast data for different ensemble members. Filenames should be formatted X_ENS_CATCHMENTID.csv
 * ```output_dir``` is the name of the directory to output processed files to.
-* ```--obsDirStartingMonth``` starting month in the ObsDir dataset (default january).
+* ```--obsDirStartingMonth``` starting month in the ObsDir dataset (default 1).
+* ```--varName``` variable name in your input data files (default 'Discharge')
 
 This script will calculate the categories (same as those in StatusCalc) that the forecasts belong to, based on both single and accumulated forecasts (results are saved into different subdirectories of output_dir).
 
@@ -101,7 +102,7 @@ Where:
 
 Example: 
 
-```python forecast_to_geotiff.py example_data/output_forecast/accumulated/ example_data/forecast/output/output_geotiff/ example_data/basins.shp 2024-02 --forecastLength 6```
+```python forecast/forecast_to_geotiff.py example_data/forecast/output/accumulated/ example_data/forecast/output/output_geotiff/ example_data/basins.shp 2024-02 --forecastLength 6```
 
 Info:
 
