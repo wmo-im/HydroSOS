@@ -1,6 +1,6 @@
 """
 BASED ON STATUSCALCV2.R BY KATIE FACER-CHILDS
-EZRA KITSON  13-05-2024 
+EZRA KITSON  25-09-2025
 """
 
 import argparse
@@ -19,6 +19,7 @@ parser.add_argument('input_directory', help='input directory, should ONLY contai
 parser.add_argument('output_directory', help='directory files will be saved to as cat_{input_file}.csv')     
 parser.add_argument('--startYear', help='start of the year range that will be used to calculate the reference average.')
 parser.add_argument('--endYear', help='end of the year range that will be used to calculate the reference average.')
+parser.add_argument('--debugging', help='print debugging')
 
 args = parser.parse_args()
 
@@ -41,13 +42,13 @@ assert stdStart < stdEnd, "startYear must be greater than endYear"
 #output_directory="./example_data/output_Python/"
 
 Path(args.output_directory).mkdir(parents=True, exist_ok=True)
+Path(f"{args.output_directory}/statusBands").mkdir(parents=True, exist_ok=True)
 
 for f in os.listdir(args.input_directory):
 
     if f.endswith('.csv'):
         print(f)
         flowdata = pd.read_csv(f"{args.input_directory}{f}")
-        print(flowdata)
         flowdata.columns = ['date','flow']
         flowdata['date'] = pd.to_datetime(flowdata['date'], format="%d/%m/%Y")
 
@@ -79,7 +80,7 @@ for f in os.listdir(args.input_directory):
         groupBy.loc[groupBy['monthly%'] < 50,'mean_flow'] = pd.NA
         groupBy.reset_index(inplace=True)
 
-        """ STEP 2: CALCULATE MEAN MONTHLY FLOWS AS A PERCENTAGE OF AVERAGE """
+        """ STEP 2: CALCULATE MEAN MONTHLY FLOWS AS A PERCENTAGE OF AVERAGE REFERENCE PERIOD """
 
         #calculate long term average
         LTA = groupBy[(groupBy['year'] >= stdStart) & (groupBy['year'] <= stdEnd)].groupby(['month'])['mean_flow'].mean()
@@ -96,29 +97,79 @@ for f in os.listdir(args.input_directory):
         if skip_file:
             continue
 
-        """ STEP 3: CALCULATE RANK PERCENTILES """
+        """ STEP 3: CALCULATE RANK PERCENTILES OF REFERENCE PERIOD """
+
+        refBy = groupBy[(groupBy['year'] >= stdStart) & (groupBy['year'] <= stdEnd)]
+
         # na values automatically set as rank na
         for i in range(1,13):
-            groupBy.loc[groupBy['month'] == i, 'weibell_rank'] = groupBy.loc[groupBy['month'] == i, 'percentile_flow'].rank(na_option='keep')/(groupBy.loc[groupBy['month'] == i, 'percentile_flow'].count()+1)
+            refBy.loc[refBy['month'] == i, 'weibell_rank'] = refBy.loc[refBy['month'] == i, 'percentile_flow'].rank(na_option='keep')/(refBy.loc[refBy['month'] == i, 'percentile_flow'].count()+1)
+
+        targetRanks = {0.10,0.25,0.75,0.9}
+        thresholdDict = {}
+
+        for i in range(1,13):
+            ranks = np.array(refBy.loc[refBy['month'] == i, 'weibell_rank'])
+            percentiles = np.array(refBy.loc[refBy['month'] == i, 'percentile_flow'])
+            for j in targetRanks:
+                #find the closest rank to the target ranks above and below
+                lower_vals = ranks[ranks <= j]
+                higher_vals = ranks[ranks >= j]
+                closest_higher = np.min(higher_vals) if higher_vals.size > 0 else False
+                closest_lower = np.max(lower_vals) if lower_vals.size > 0 else False
+                closest_higher_idx = np.where(ranks == closest_higher)[0][0] if closest_higher else False
+                closest_lower_idx = np.where(ranks == closest_lower)[0][0] if closest_lower else False
+                #find the percentile values matching to the closet rank
+                higher_percentile = percentiles[closest_higher_idx] if closest_higher_idx else False
+                lower_percentile = percentiles[closest_lower_idx] if closest_lower_idx else False
+                #use a linear interpolation to get the percentile value of the target rank based on these two values
+                # this occurs if the target rank perfectly matches an observed rank
+                if higher_percentile == lower_percentile:
+                    interpolated_percentile = lower_percentile
+                # this occurs if no observed ranks were higher than the target rank, in which case set as the lower percentile
+                elif higher_percentile == False:
+                    interpolated_percentile = lower_percentile
+                # this occurs if no observed ranks were lower than the target rank, in which case set as the higher percentile
+                elif lower_percentile == False:
+                    interpolated_percentile = higher_percentile
+                # otherwise linearly interpolate the percentile value from the closest higher and lower 
+                else:
+                    interpolated_percentile = lower_percentile + ((j - closest_lower) / (closest_higher - closest_lower)) * (higher_percentile - lower_percentile) 
+                if args.debugging: 
+                    print(f"Month : {i}")
+                    print(f"Percentiles in ref: {percentiles}")
+                    print(f"Ranks in ref: {ranks}")
+                    print(f"Target rank: {j}")
+                    print(f"Closest lower rank: {closest_lower}")
+                    print(f"Closest  higher rank: {closest_higher}")
+                    print(f"Closest lower percentile: {lower_percentile}")
+                    print(f"Closest higher percentile: {higher_percentile}")
+                    print(f"Interpolated percentile: {interpolated_percentile}")
+                #add this to the threshold dictionary
+                thresholdDict[i,j] = interpolated_percentile
+                #add min, mean and max to thresholdDict to 
+                thresholdDict[i,'max'] = np.nanmax(percentiles)
+                thresholdDict[i,'median'] = np.nanmedian(percentiles)
+                thresholdDict[i,'min'] = np.nanmin(percentiles)
 
         """ STEP 4: ASSIGN STATUS CATEGORIES """
 
-        def flow_status(weibell_rank):
+        def flow_status(percentile, month, thresholdDict):
             status = pd.NA
-            if weibell_rank <= 0.10:
+            if percentile <= thresholdDict[month,0.1]:
                 status = 1
-            elif weibell_rank <= 0.25:
+            elif percentile <= thresholdDict[month,0.25]:
                 status = 2
-            elif weibell_rank <= 0.75:
+            elif percentile <= thresholdDict[month,0.75]:
                 status = 3
-            elif weibell_rank <= 0.9:
+            elif percentile <= thresholdDict[month,0.9]:
                 status = 4
-            elif weibell_rank <= 1:
+            elif percentile > thresholdDict[month,0.9]:
                 status = 5
             return status
 
         for i in groupBy.index:
-            groupBy.loc[i,'category'] = flow_status(groupBy.loc[i,'weibell_rank'])
+            groupBy.loc[i,'category'] = flow_status(percentile=groupBy.loc[i,'percentile_flow'],month=groupBy.loc[i,'month'],thresholdDict=thresholdDict)
 
 
         """ STEP 5: WRITE DATA """
@@ -126,4 +177,11 @@ for f in os.listdir(args.input_directory):
         groupBy['date'] = groupBy['date'].dt.strftime('%Y-%m-%d')
         groupBy['category'] = groupBy['category'].astype('Int64')
         groupBy.sort_values(['year','month']).filter(['date','category']).to_csv(f"{args.output_directory}cat_{f}", index=False)
+        forecastBands = pd.DataFrame.from_dict(pd.Series(thresholdDict).unstack())
+        forecastBands.to_csv(f"{args.output_directory}/statusBands/{f.split('.')[0]}_bands.csv")
+       
+
+
+
+
         
