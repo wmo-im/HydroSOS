@@ -844,13 +844,13 @@ def metadata(token, url, output, monitoring_point, variable_name, timeseries_ide
         **parsed_filter
     )
     if output is not None:
-        if format is not None and format == "csv":
+        if format is not None and format.lower() == "csv":
             df = timeseriesMetadataToDataFrame(data)
             df.to_csv(open(output, "w"), index=False)
         else:
             json.dump(data, open(output, "w"), ensure_ascii=False)
     else:
-        if format is not None and format == "csv":
+        if format is not None and format.lower() == "csv":
             df = timeseriesMetadataToDataFrame(data)
             click.echo(df.to_csv(index=False))
         else:
