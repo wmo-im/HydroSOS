@@ -16,7 +16,8 @@ parser = argparse.ArgumentParser(
 
 
 parser.add_argument('input_directory', help='input directory, should ONLY contain .csv daily timeseries, see GitHub for examples.')        
-parser.add_argument('output_directory', help='directory files will be saved to as cat_{input_file}.csv')     
+parser.add_argument('output_directory', help='directory files will be saved to as cat_{input_file}.csv')  
+parser.add_argument('--dateFormat', help='format of the dates in the input directory (default %d/%m/%Y)')
 parser.add_argument('--startYear', help='start of the year range that will be used to calculate the reference average.')
 parser.add_argument('--endYear', help='end of the year range that will be used to calculate the reference average.')
 parser.add_argument('--debugging', help='print debugging')
@@ -35,12 +36,25 @@ else:
     print("No end year set, defaulting to 2020.")
     stdEnd=2020
 
+if args.dateFormat:
+    dateFormat=args.dateFormat
+else: 
+    print("No date format set, defaulting to %d/%m/%Y.")
+    dateFormat="%d/%m/%Y"
+
+
 assert stdStart < stdEnd, "startYear must be greater than endYear"
 
 #stationid="39001"
 #input_directory="./example_data/input/"
 #output_directory="./example_data/output_Python/"
 
+if not args.input_directory.endswith(os.sep):
+    args.input_directory = args.input_directory + os.sep
+ 
+if not args.output_directory.endswith(os.sep):
+    args.output_directory = args.output_directory + os.sep
+ 
 Path(args.output_directory).mkdir(parents=True, exist_ok=True)
 Path(f"{args.output_directory}/statusBands").mkdir(parents=True, exist_ok=True)
 
@@ -50,7 +64,7 @@ for f in os.listdir(args.input_directory):
         print(f)
         flowdata = pd.read_csv(f"{args.input_directory}{f}")
         flowdata.columns = ['date','flow']
-        flowdata['date'] = pd.to_datetime(flowdata['date'], format="%d/%m/%Y")
+        flowdata['date'] = pd.to_datetime(flowdata['date'], format=dateFormat)
 
         #check dates are sequential
         diff = pd.date_range(start = flowdata['date'].min(), end = flowdata['date'].max() ).difference(flowdata['date'])
