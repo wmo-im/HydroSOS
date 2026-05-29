@@ -16,8 +16,8 @@ args = parser.parse_args()
 allFilesDF = pd.DataFrame()
 # read the CSV files in the data directory
 for index, filename in enumerate(os.listdir(args.input_directory)):
-        with open(args.input_directory+'/'+filename, mode="r") as fr:
-            if filename.endswith('.csv'):
+        if filename.endswith('.csv'):
+            with open(args.input_directory+'/'+filename, mode="r") as fr:
                 df = pd.read_csv(fr)
                 filename = os.path.splitext(str(filename))[0] #remove file extenstion
                 stationID = filename.split('_')[1] #remove cat_

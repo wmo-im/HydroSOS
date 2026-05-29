@@ -11,6 +11,8 @@ If your data is ***forecast*** run ```forecast/forecastcalc.py``` followed by ``
 
 On the HydroSOS web portal, the monthly category .csv files for each station/hydrobasin (produced by statuscalc.py/forecastcalc.py) are displayed in timeseries graphs, whereas the .json/.geotiff files for each month are visualised on the map. 
 
+Instructions for downloading and using Python for the first time and uploading data onto the Sharepoint are available in the ```/pdfs``` folder. 
+
 ## Status  
 
 ### ```status/statuscalc.py```

@@ -20,6 +20,7 @@ parser.add_argument('output_directory', help='directory files will be saved to a
 parser.add_argument('--dateFormat', help='format of the dates in the input directory (default %d/%m/%Y)')
 parser.add_argument('--startYear', help='start of the year range that will be used to calculate the reference average.')
 parser.add_argument('--endYear', help='end of the year range that will be used to calculate the reference average.')
+parser.add_argument('--outputLength', help='how many years of data to output (default 5)')
 parser.add_argument('--debugging', help='print debugging')
 
 args = parser.parse_args()
@@ -41,6 +42,12 @@ if args.dateFormat:
 else: 
     print("No date format set, defaulting to %d/%m/%Y.")
     dateFormat="%d/%m/%Y"
+
+if args.outputLength:
+    outputLength = args.outputLength
+else:
+    print("No output length set, defaulting to 5 years.")
+    outputLength = 5
 
 
 assert stdStart < stdEnd, "startYear must be greater than endYear"
@@ -129,36 +136,37 @@ for f in os.listdir(args.input_directory):
                 #find the closest rank to the target ranks above and below
                 lower_vals = ranks[ranks <= j]
                 higher_vals = ranks[ranks >= j]
-                closest_higher = np.min(higher_vals) if higher_vals.size > 0 else False
-                closest_lower = np.max(lower_vals) if lower_vals.size > 0 else False
-                closest_higher_idx = np.where(ranks == closest_higher)[0][0] if closest_higher else False
-                closest_lower_idx = np.where(ranks == closest_lower)[0][0] if closest_lower else False
+                closest_higher = np.min(higher_vals) if higher_vals.size > 0 else 'NOTF'
+                closest_lower = np.max(lower_vals) if lower_vals.size > 0 else 'NOTF'
+                closest_higher_idx = np.where(ranks == closest_higher)[0][0] if closest_higher != 'NOTF' else 'NOTF'
+                closest_lower_idx = np.where(ranks == closest_lower)[0][0] if closest_lower != 'NOTF' else 'NOTF'
                 #find the percentile values matching to the closet rank
-                higher_percentile = percentiles[closest_higher_idx] if closest_higher_idx else False
-                lower_percentile = percentiles[closest_lower_idx] if closest_lower_idx else False
+                higher_percentile = percentiles[closest_higher_idx] if closest_higher_idx != 'NOTF' else 'NOTF'
+                lower_percentile = percentiles[closest_lower_idx] if closest_lower_idx != 'NOTF' else 'NOTF'
                 #use a linear interpolation to get the percentile value of the target rank based on these two values
                 # this occurs if the target rank perfectly matches an observed rank
                 if higher_percentile == lower_percentile:
                     interpolated_percentile = lower_percentile
                 # this occurs if no observed ranks were higher than the target rank, in which case set as the lower percentile
-                elif higher_percentile == False:
+                elif higher_percentile == 'NOTF':
                     interpolated_percentile = lower_percentile
                 # this occurs if no observed ranks were lower than the target rank, in which case set as the higher percentile
-                elif lower_percentile == False:
+                elif lower_percentile == 'NOTF':
                     interpolated_percentile = higher_percentile
                 # otherwise linearly interpolate the percentile value from the closest higher and lower 
                 else:
                     interpolated_percentile = lower_percentile + ((j - closest_lower) / (closest_higher - closest_lower)) * (higher_percentile - lower_percentile) 
                 if args.debugging: 
-                    print(f"Month : {i}")
-                    print(f"Percentiles in ref: {percentiles}")
-                    print(f"Ranks in ref: {ranks}")
-                    print(f"Target rank: {j}")
-                    print(f"Closest lower rank: {closest_lower}")
-                    print(f"Closest  higher rank: {closest_higher}")
-                    print(f"Closest lower percentile: {lower_percentile}")
-                    print(f"Closest higher percentile: {higher_percentile}")
-                    print(f"Interpolated percentile: {interpolated_percentile}")
+                        print(f"Month : {i}")
+                        print(f"Percentiles in ref: {percentiles}")
+                        print(f"Ranks in ref: {ranks}")
+                        print(f"Target rank: {j}")
+                        print(f"Closest lower rank: {closest_lower}")
+                        print(f"Closest  higher rank: {closest_higher}")
+                        print(f"Closest lower index : {closest_lower_idx}")
+                        print(f"Closest lower percentile: {lower_percentile}")
+                        print(f"Closest higher percentile: {higher_percentile}")
+                        print(f"Interpolated percentile: {interpolated_percentile}")
                 #add this to the threshold dictionary
                 thresholdDict[i,j] = interpolated_percentile
                 #add min, mean and max to thresholdDict to 
@@ -187,6 +195,8 @@ for f in os.listdir(args.input_directory):
 
 
         """ STEP 5: WRITE DATA """
+        # filter to output length 
+        groupBy = groupBy[groupBy['year'] >= (max(groupBy['year']) - outputLength)]
         groupBy['date'] = pd.to_datetime(groupBy[['year', 'month']].assign(DAY=1))
         groupBy['date'] = groupBy['date'].dt.strftime('%Y-%m-%d')
         groupBy['category'] = groupBy['category'].astype('Int64')
