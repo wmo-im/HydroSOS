@@ -34,6 +34,7 @@ Where:
 * ```output_directory``` is the directory the processed .csv files will be written to. They will have the same name as files in the input_directory but with ```cat_``` appended to the start of the name.
 * ```--startYear``` an optional argument, which year to use as the start range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status.
 * ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status. 
+* ```--dateFormat`` an optional argument, used to set the input date format (default "%d/%m/%Y").
 
 ### ```status/status_to_json.py```
 A Python script that converts the csv outputs of the StatusCalc Python/R script to json files for use in the HydroSOS web portal is also provided. It can process multiple files in one go.
