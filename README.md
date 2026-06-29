@@ -32,9 +32,10 @@ For example:
 Where:
 *  ```input_directory``` is the directory containing the .csv timeseries to be processed. The script will attempt to parse every .csv file in this directory, so remove any .csv files you don't want to be processed. See files in [example_data/status/input](./example_data/status/input) for how these files should look.
 * ```output_directory``` is the directory the processed .csv files will be written to. They will have the same name as files in the input_directory but with ```cat_``` appended to the start of the name.
-* ```--startYear``` an optional argument, which year to use as the start range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status.
-* ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status. 
+* ```--startYear``` an optional argument, which year to use as the start range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status (default 1991).
+* ```--endYear``` an optional argument, which year to use as the end range to calculate the reference average value. Each monthly value is divided by this reference average before calculating percentile rank and status (default 2020). 
 * ```--dateFormat``` an optional argument, used to set the input date format (default "%d/%m/%Y").
+* ```--outputLength``` an optional argument, used to set the how many years of data to output (default 5).
 
 ### ```status/status_to_json.py```
 A Python script that converts the csv outputs of the StatusCalc Python/R script to json files for use in the HydroSOS web portal is also provided. It can process multiple files in one go.

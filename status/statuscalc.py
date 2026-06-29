@@ -44,7 +44,7 @@ else:
     dateFormat="%d/%m/%Y"
 
 if args.outputLength:
-    outputLength = args.outputLength
+    outputLength = int(args.outputLength)
 else:
     print("No output length set, defaulting to 5 years.")
     outputLength = 5
